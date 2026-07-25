@@ -1,29 +1,8 @@
 import React, { useState, useEffect, useMemo, useRef } from "react";
 import { Plus, Trash2, BookOpen, TrendingUp, TrendingDown, Camera, X, Image as ImageIcon } from "lucide-react";
 import { storage } from "./storage.js";
-
-const COLORS = {
-  bg: "#0A0A0A",
-  card: "#141210",
-  cardBorder: "#2A241A",
-  gold: "#D4AF37",
-  goldMuted: "#B8912F",
-  text: "#F1ECDD",
-  textMuted: "#8C8577",
-  green: "#4C9A5B",
-  red: "#B8514F",
-  inputBg: "#1B1712",
-};
-
-const SETUPS = [
-  "Snelweg (200)",
-  "Invoegstrook (CLD Cross)",
-  "Rijstrook (STRAP)",
-  "Vangrail (DC)",
-  "Verkeerslicht (Confluence)",
-  "Afrit / Structuurbreuk",
-  "Anders",
-];
+import { COLORS, SETUPS, MOODS } from "./theme.js";
+import Insights from "./Insights.jsx";
 
 const ENTRIES_KEY = "entries";
 const MAX_SCREENSHOT_WIDTH = 900;
@@ -44,6 +23,7 @@ function emptyForm() {
     setup: SETUPS[0],
     result: "",
     lesson: "",
+    mood: "",
   };
 }
 
@@ -165,6 +145,7 @@ export default function App() {
       setup: form.setup,
       result: Number(form.result),
       lesson: form.lesson.trim(),
+      mood: form.mood || "",
       hasScreenshot: !!pendingScreenshot,
     };
 
@@ -415,6 +396,33 @@ export default function App() {
             </label>
           </div>
 
+          {/* Emotionele toestand */}
+          <div className="mb-3">
+            <p className="text-xs mb-1" style={{ color: COLORS.textMuted }}>
+              Emotionele toestand (optioneel, voor patroonherkenning)
+            </p>
+            <div className="flex flex-wrap gap-1.5">
+              {MOODS.map((m) => {
+                const active = form.mood === m;
+                return (
+                  <button
+                    key={m}
+                    type="button"
+                    onClick={() => updateField("mood", active ? "" : m)}
+                    style={{
+                      background: active ? COLORS.gold : COLORS.inputBg,
+                      border: `1px solid ${COLORS.cardBorder}`,
+                      color: active ? "#0A0A0A" : COLORS.textMuted,
+                    }}
+                    className="rounded-full px-3 py-1 text-xs font-semibold"
+                  >
+                    {m}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+
           {/* Screenshot */}
           <div className="mb-3">
             <p className="text-xs mb-1" style={{ color: COLORS.textMuted }}>
@@ -564,6 +572,7 @@ export default function App() {
                     )}
                     {entry.positionSize && <span>Grootte: {entry.positionSize}</span>}
                     <span>{entry.setup}</span>
+                    {entry.mood && <span>Stemming: {entry.mood}</span>}
                   </div>
 
                   {entry.lesson && (
@@ -608,6 +617,12 @@ export default function App() {
                 </div>
               );
             })}
+          </div>
+        )}
+
+        {!loading && (
+          <div className="mt-8">
+            <Insights entries={entries} />
           </div>
         )}
       </div>

@@ -100,6 +100,12 @@ function EquityCurve({ points }) {
           </text>
         )}
 
+        {n === 0 && (
+          <text x={width / 2} y={zeroY - 10} fill={COLORS.textMuted} fontSize="11" textAnchor="middle">
+            Nog geen trades gelogd
+          </text>
+        )}
+
         {hovered &&
           (() => {
             const hx = x(hoverIdx);
@@ -228,15 +234,13 @@ export default function Insights({ entries }) {
       .sort((a, b) => b.winRate - a.winRate);
   }, [entries]);
 
-  if (entries.length === 0) return null;
-
   return (
     <div className="flex flex-col gap-4 mb-8">
       <h2 style={{ color: COLORS.text }} className="text-sm font-semibold flex items-center gap-2">
         <LineChart size={16} color={COLORS.gold} />
         Inzichten &amp; patronen
       </h2>
-      {entries.length < 5 && (
+      {entries.length > 0 && entries.length < 5 && (
         <p style={{ color: COLORS.textMuted }} className="text-xs -mt-3">
           Log meer trades (5+) voor betrouwbaardere patronen.
         </p>

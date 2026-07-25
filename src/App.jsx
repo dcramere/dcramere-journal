@@ -1,8 +1,9 @@
 import React, { useState, useEffect, useMemo, useRef } from "react";
-import { Plus, Trash2, BookOpen, TrendingUp, TrendingDown, Camera, X, Image as ImageIcon } from "lucide-react";
+import { Plus, Trash2, BookOpen, TrendingUp, TrendingDown, Camera, X, Image as ImageIcon, HelpCircle } from "lucide-react";
 import { storage } from "./storage.js";
 import { COLORS, SETUPS, MOODS } from "./theme.js";
 import Insights from "./Insights.jsx";
+import HelpPanel from "./HelpPanel.jsx";
 
 const ENTRIES_KEY = "entries";
 const MAX_SCREENSHOT_WIDTH = 900;
@@ -62,6 +63,7 @@ export default function App() {
   const [screenshotCache, setScreenshotCache] = useState({});
   const [openScreenshotId, setOpenScreenshotId] = useState(null);
   const [screenshotLoadError, setScreenshotLoadError] = useState({});
+  const [showHelp, setShowHelp] = useState(false);
   const fileInputRef = useRef(null);
 
   useEffect(() => {
@@ -224,20 +226,37 @@ export default function App() {
     <div style={{ background: COLORS.bg, minHeight: "100vh", color: COLORS.text }} className="font-sans">
       <div className="max-w-3xl mx-auto px-4 py-8 sm:py-10">
         {/* Header */}
-        <div className="flex items-center gap-3 mb-1">
-          <BookOpen size={22} color={COLORS.gold} />
-          <h1
-            style={{ fontFamily: "Georgia, serif", color: COLORS.gold, letterSpacing: "0.04em" }}
-            className="text-xl sm:text-2xl font-bold"
+        <div className="flex items-center justify-between gap-3 mb-1">
+          <div className="flex items-center gap-3">
+            <BookOpen size={22} color={COLORS.gold} />
+            <h1
+              style={{ fontFamily: "Georgia, serif", color: COLORS.gold, letterSpacing: "0.04em" }}
+              className="text-xl sm:text-2xl font-bold"
+            >
+              DCRAMERE JOURNAL
+            </h1>
+          </div>
+          <button
+            type="button"
+            onClick={() => setShowHelp((v) => !v)}
+            style={{
+              color: showHelp ? COLORS.gold : COLORS.textMuted,
+              border: `1px solid ${COLORS.cardBorder}`,
+            }}
+            className="flex items-center gap-1 rounded-full px-2.5 py-1 text-xs font-semibold shrink-0"
+            aria-label="Hoe gebruik je dit?"
           >
-            DCRAMERE JOURNAL
-          </h1>
+            <HelpCircle size={14} />
+            <span className="hidden sm:inline">Hoe werkt dit?</span>
+          </button>
         </div>
         <div style={{ borderBottom: `1px solid ${COLORS.cardBorder}` }} className="pb-3 mb-6">
           <p style={{ color: COLORS.textMuted }} className="text-xs tracking-widest">
             SEE · DECIPHER · TRADE
           </p>
         </div>
+
+        {showHelp && <HelpPanel onClose={() => setShowHelp(false)} />}
 
         {/* Stats */}
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-8">

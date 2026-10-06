@@ -1,83 +1,75 @@
 import React from "react";
 import { X, HelpCircle } from "lucide-react";
 import { COLORS } from "./theme.js";
+import { tr } from "./i18n.js";
+import { Rich } from "./ui/Rich.jsx";
 
-function Strong({ children }) {
-  return <strong style={{ color: COLORS.text }}>{children}</strong>;
+function Block({ title, children }) {
+  return (
+    <div>
+      <p style={{ color: COLORS.text }} className="font-semibold mb-1">
+        {tr(title)}
+      </p>
+      {children}
+    </div>
+  );
 }
 
 export default function HelpPanel({ onClose }) {
   return (
-    <div
-      style={{ background: COLORS.card, border: `1px solid ${COLORS.cardBorder}` }}
-      className="rounded-lg p-4 sm:p-5 mb-8"
-    >
+    <div style={{ background: COLORS.card, border: `1px solid ${COLORS.cardBorder}` }} className="rounded-xl p-4 sm:p-5 mb-4">
       <div className="flex items-center justify-between mb-3">
         <h2 style={{ color: COLORS.text }} className="text-sm font-semibold flex items-center gap-2">
           <HelpCircle size={16} color={COLORS.gold} />
-          Hoe gebruik je de journal
+          {tr("Hoe gebruik je de journal")}
         </h2>
-        <button type="button" onClick={onClose} style={{ color: COLORS.textMuted }} aria-label="Sluiten">
+        <button type="button" onClick={onClose} style={{ color: COLORS.textMuted }} aria-label={tr("Sluiten")}>
           <X size={16} />
         </button>
       </div>
 
-      <div className="flex flex-col gap-4 text-xs leading-relaxed" style={{ color: COLORS.textMuted }}>
-        <div>
-          <p style={{ color: COLORS.text }} className="font-semibold mb-1">
-            Een trade loggen
-          </p>
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-xs leading-relaxed" style={{ color: COLORS.textMuted }}>
+        <Block title="1. Begin bij Import">
           <p>
-            Alleen <Strong>symbool</Strong> en <Strong>resultaat in R</Strong> zijn verplicht. Richting,
-            entry/exit, positiegrootte, reden, fout/les, emotionele toestand en screenshot zijn optioneel —
-            maar leveren betere inzichten op.
+            <Rich k="Pas je account aan (naam, type, <b>startsaldo</b> en <b>gepland risico per trade</b>) en sleep je Tradovate-export (Performance of Orders, CSV) in het vak. Trades die je al had worden overgeslagen. Liever zelf loggen? Gebruik de knop <b>+ Trade</b> rechtsboven." />
           </p>
-        </div>
+        </Block>
 
-        <div>
-          <p style={{ color: COLORS.text }} className="font-semibold mb-1">
-            Emotionele toestand
-          </p>
+        <Block title="2. Een trade loggen">
           <p>
-            Kies vóór het loggen hoe je je voelde. Hoe eerlijker je dit invult, hoe bruikbaarder de grafiek
-            hieronder — zo zie je zwart-op-wit welke gemoedstoestanden (bijv. wraaktrades na een verlies) je
-            geld kosten.
+            <Rich k="Vul symbool, richting, aantal en een resultaat in ($ of R). Met entry, exit en aantal van een bekend contract (MNQ, ES, NQ …) rekent de app het resultaat zelf uit. Vink vooraf je <b>emotionele toestand</b> aan en noteer eventueel een les of screenshot." />
           </p>
-        </div>
+        </Block>
 
-        <div>
-          <p style={{ color: COLORS.text }} className="font-semibold mb-1">
-            Inzichten &amp; patronen
-          </p>
+        <Block title="3. Journal, Trades en Stats">
           <ul className="list-disc list-inside space-y-1">
             <li>
-              <Strong>Equity curve</Strong> — je cumulatieve R-resultaat over tijd. Tik of hover op een punt
-              voor de details van die trade.
+              <Rich k="<b>Journal</b> — kerncijfers, jaar- en maandkalender en de grafieken. Klik een dag om zijn trades te zien." />
             </li>
             <li>
-              <Strong>Gem. R per emotionele toestand</Strong> — groen = gemiddeld winstgevend, rood =
-              gemiddeld verlieslatend per gelogde stemming.
+              <Rich k="<b>Trades</b> — alle trades per dag. Klik een trade voor details, screenshot, bewerken of verwijderen." />
             </li>
             <li>
-              <Strong>Win rate per reden</Strong> — welke Handelsweg-stappen daadwerkelijk raak zijn.
+              <Rich k="<b>Stats</b> — streaks, drawdown, per weekdag/uur/contract/richting/emotie/setup, tijd tot doel, Monte Carlo, kans op ruïne en Kelly (die laatste drie pas vanaf 100 trades)." />
             </li>
           </ul>
-          <p className="mt-1">
-            Bij minder dan 5 trades zijn de patronen nog niet statistisch betrouwbaar — hoe meer je logt,
-            hoe scherper het beeld.
-          </p>
-        </div>
+        </Block>
 
-        <div>
-          <p style={{ color: COLORS.text }} className="font-semibold mb-1">
-            Data-opslag
-          </p>
+        <Block title="4. Filters en eenheid">
           <p>
-            Alles staat lokaal opgeslagen in de browser van dit apparaat (<code>localStorage</code>). Er is
-            geen sync tussen bijvoorbeeld je telefoon en laptop, en als je browserdata wist, ben je je
-            journal kwijt.
+            <Rich k="Bovenin kies je <b>periode</b> en <b>account</b>. De knop <b>$ / % / R</b> schakelt elk cijfer en elke grafiek tussen dollars, procent van je account en R-veelvouden van je geplande risico." />
           </p>
-        </div>
+        </Block>
+
+        <Block title="5. Emotie-patronen">
+          <p>{tr("Bij Journal en Stats zie je het gemiddelde resultaat per emotionele toestand. Zo zie je zwart-op-wit welke gemoedstoestanden (bijv. wraaktrades na een verlies) je geld kosten.")}</p>
+        </Block>
+
+        <Block title="6. Je data">
+          <p>
+            <Rich k="Alles staat lokaal in de browser van dit apparaat (localStorage); er is geen sync tussen telefoon en laptop. Download daarom regelmatig een <b>back-up</b> op het tabblad Import, of een CSV op het tabblad Trades." />
+          </p>
+        </Block>
       </div>
     </div>
   );

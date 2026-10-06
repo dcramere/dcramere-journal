@@ -1,74 +1,58 @@
 # DCRAMERE Journal
 
-Een simpele trading journal — logt je trades (symbool, richting, entry/exit,
-positiegrootte, resultaat in R, setup, fout/les en een screenshot) en
-berekent automatisch je win rate, gemiddelde R en netto R.
+🇳🇱 Een trading journal voor futures-handelaren, in het Nederlands én Engels (schakelaar **NL | EN** rechtsboven).
+🇬🇧 A trading journal for futures traders, in Dutch and English (**NL | EN** switch top right).
 
-**Belangrijk om te weten:** deze versie bewaart alles in `localStorage`, dus
-lokaal in de browser van elke bezoeker. Er is geen gedeelde database — jouw
-trades op je telefoon staan dus niet automatisch ook op je laptop, en als je
-browserdata wist, ben je je journal kwijt. Voor een echte multi-user versie
-met een centrale database heb je een backend nodig (zoals de DCRAMERE
-Journal-SaaS die al in ontwikkeling is).
+**Vier tabbladen / Four tabs**
 
-## Hoe gebruik je de journal
+| Tab | NL | EN |
+|---|---|---|
+| **Import** | Accounts (live/prop/paper/backtest), startsaldo, risico per trade, stortingen/opnames, CSV-import (Tradovate), back-up en herstel | Accounts, starting balance, risk per trade, deposits/withdrawals, CSV import (Tradovate), backup and restore |
+| **Journal** | Kerncijfers, jaar- en maandkalender, grafieken (win %, expectancy, drawdown, positiegrootte, dagresultaat, houdtijd, tijdstip, cumulatief) | Key figures, year and month calendar, charts (win %, expectancy, drawdown, position size, daily result, hold time, time of day, cumulative) |
+| **Trades** | Alle trades per dag, filteren, details, bewerken, screenshot, CSV-export | All trades by day, filters, details, editing, screenshots, CSV export |
+| **Stats** | Streaks, per weekdag/uur/contract/richting/**emotie**/setup, tijd tot doel, groeitempo, Monte Carlo, kans op ruïne, Kelly | Streaks, by weekday/hour/contract/direction/**emotion**/setup, time to target, growth rate, Monte Carlo, risk of ruin, Kelly |
 
-### Een trade loggen
+Bovenin: filter op **periode** en **account**, en schakel alles tussen **$ / % / R**.
+At the top: filter by **period** and **account**, and switch everything between **$ / % / R**.
 
-1. Vul minimaal een **symbool** (bijv. `BTCUSDT`) en het **resultaat in R** in
-   (bijv. `1.5` voor 1,5R winst, `-1` voor 1R verlies) — dit zijn de enige
-   twee verplichte velden.
-2. De rest is optioneel maar levert betere data op voor de inzichten
-   verderop:
-   - **Richting**: Long of Short.
-   - **Entry / Exit / Positiegrootte**: voor je eigen naslag, tellen niet mee
-     in de berekeningen.
-   - **Reden (Handelsweg-stap)**: welk setup-type de trade triggerde. Bepaalt
-     de "Win rate per reden"-grafiek.
-   - **Fout / les**: een korte notitie — waardevol bij het terugkijken.
-   - **Emotionele toestand**: hoe je je voelde vóór je de trade nam (Rustig,
-     Zelfverzekerd, Onzeker, Ongeduldig, Gefrustreerd, Wraakzuchtig). Log dit
-     zo eerlijk mogelijk — dit is de basis van de "Gem. R per emotionele
-     toestand"-grafiek, waarmee je ziet welke gemoedstoestanden je geld
-     kosten (bijv. wraaktrades na een verlies).
-   - **Screenshot**: voeg een chart-screenshot toe; wordt automatisch
-     verkleind en apart opgeslagen.
-3. Klik **Trade loggen**. De trade verschijnt bovenaan de lijst en de
-   statistieken (Trades, Win rate, Gem. R, Netto R) updaten direct.
+**Belangrijk om te weten / Important:** alles wordt bewaard in `localStorage`, dus lokaal in de browser van elke
+bezoeker. Er is geen gedeelde database — trades op je telefoon staan niet automatisch op je laptop, en als je
+browserdata wist ben je je journal kwijt. Download daarom regelmatig een back-up (tabblad Import).
+Everything is stored in `localStorage` in each visitor's own browser. There is no shared database — trades on your
+phone are not on your laptop, and clearing browser data wipes the journal. Download a backup regularly (Import tab).
 
-### Trades bekijken en beheren
+## Hoe gebruik je de journal / How to use it
 
-- Elke trade in de lijst toont symbool, richting, resultaat, reden en (als
-  ingevuld) je stemming en les.
-- Klik op **Screenshot bekijken** om een bijgevoegde chart-afbeelding te
-  tonen.
-- Klik op het prullenbak-icoon om een trade permanent te verwijderen
-  (inclusief screenshot) — dit kan niet ongedaan worden gemaakt.
+**NL**
 
-### Inzichten & patronen
+1. **Import** — pas je account aan (startsaldo, gepland risico per trade) en sleep je Tradovate-export
+   (*Performance* of *Orders*, CSV) in het vak. Dubbele trades worden overgeslagen. Zet de tijdzone van het bestand goed.
+2. **Handmatig loggen** — knop **+ Trade**. Symbool, richting, aantal en resultaat ($ of R). Met entry, exit en aantal van een
+   bekend contract (MNQ, ES, NQ, MES, …) rekent de app het resultaat zelf uit, inclusief commissie.
+3. **Emotionele toestand** — vink vóór de trade aan hoe je je voelde (Rustig, Zelfverzekerd, Onzeker, Ongeduldig,
+   Gefrustreerd, Wraakzuchtig). In Journal en Stats zie je per stemming je gemiddelde resultaat.
+4. **Bekijken** — Journal voor het overzicht, klik een dag in de kalender om zijn trades te zien; Trades voor details en
+   notities; Stats voor patronen. Monte Carlo, kans op ruïne en Kelly verschijnen pas vanaf 100 trades.
 
-Onderaan de pagina staat een sectie die automatisch patronen in je data
-blootlegt:
+**EN**
 
-- **Equity curve**: je cumulatieve R-resultaat over tijd. Tik of hover op een
-  punt voor de details van die specifieke trade. Bij 0 trades zie je een
-  lege curve als placeholder.
-- **Gem. R per emotionele toestand**: groene balken = gemiddeld winstgevend,
-  rode balken = gemiddeld verlieslatend per gelogde stemming. Zo zie je
-  zwart-op-wit welke emoties je edge ondermijnen.
-- **Win rate per reden**: welke Handelsweg-stappen/setups daadwerkelijk
-  raak zijn, gesorteerd van hoog naar laag.
+1. **Import** — adjust your account (starting balance, planned risk per trade) and drop your Tradovate export
+   (*Performance* or *Orders*, CSV) in the box. Duplicate trades are skipped. Set the file's time zone correctly.
+2. **Log by hand** — the **+ Trade** button. Symbol, direction, quantity and result ($ or R). With entry, exit and quantity of a
+   known contract (MNQ, ES, NQ, MES, …) the app calculates the result itself, commission included.
+3. **Emotional state** — tick how you felt before the trade (Calm, Confident, Unsure, Impatient, Frustrated,
+   Revenge-driven). Journal and Stats show your average result per mood.
+4. **Review** — Journal for the overview, click a day in the calendar to see its trades; Trades for details and notes;
+   Stats for patterns. Monte Carlo, risk of ruin and Kelly appear from 100 trades.
 
-Bij minder dan 5 trades toont de app een waarschuwing dat de patronen nog
-niet statistisch betrouwbaar zijn — hoe meer je logt, hoe scherper het
-beeld.
+**Hoe rekent de app / How the numbers work**
 
-### Data kwijtraken voorkomen
-
-Alles staat in `localStorage` van de browser waarin je logt (zie
-waarschuwing hierboven). Log je trades dus consistent vanaf hetzelfde
-apparaat/dezelfde browser, of exporteer periodiek handmatig als je dat
-belangrijk vindt (nog geen ingebouwde export-knop).
+- R = resultaat ÷ je geplande risico per trade / R = result ÷ your planned risk per trade. % = resultaat ÷ startsaldo
+  (of huidig saldo bij *Samengesteld* / or current balance in *Compounding* mode).
+- Groeitempo is tijdgewogen: stortingen en opnames tellen niet mee als winst / Growth rate is time-weighted: deposits and
+  withdrawals do not count as profit.
+- Tijdzone (standaard America/New_York) bepaalt op welke dag, uur en weekdag een trade valt / The time zone (default
+  America/New_York) decides which day, hour and weekday a trade falls on.
 
 ## Lokaal draaien
 
@@ -120,8 +104,15 @@ dcramere-journal/
 ├── tailwind.config.js
 ├── postcss.config.js
 └── src/
-    ├── main.jsx      # React entry point
-    ├── App.jsx        # De journal-tool zelf
-    ├── storage.js     # localStorage-laag (get/set/delete)
-    └── index.css      # Tailwind
+    ├── main.jsx        # React entry point
+    ├── App.jsx         # Shell: tabs, filters, taalwissel / tabs, filters, language switch
+    ├── i18n.js         # tr() + taalkeuze / language selection
+    ├── i18n-en.js      # Engelse vertalingen (sleutel = Nederlandse tekst) / English translations
+    ├── theme.js        # Kleuren, moods, setups, periodes
+    ├── storage.js      # localStorage-laag (get/set/delete)
+    ├── lib/            # Rekenlaag (metrics, csv, tijdzones, formattering) / calculation layer
+    ├── state/          # useJournal (opslag) en useScope (filters + statistieken)
+    ├── views/          # Import, Journal, Trades, Stats
+    ├── components/     # Kalender, trade-formulier, filterbalk
+    └── ui/             # Kaarten, knoppen, grafieken (SVG, zonder externe library)
 ```

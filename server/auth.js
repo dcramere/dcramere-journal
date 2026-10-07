@@ -38,7 +38,7 @@ export const safeEqual = (a, b) => {
   return x.length === y.length && timingSafeEqual(x, y);
 };
 
-const sha256 = (s) => createHash("sha256").update(s).digest("hex");
+export const sha256 = (s) => createHash("sha256").update(s).digest("hex");
 
 export async function createSession(req, res, userId) {
   const token = randomBytes(32).toString("base64url");

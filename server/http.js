@@ -78,3 +78,22 @@ export function assertSameOrigin(req) {
     if (host !== own) throw new ApiError(403, "csrf");
   }
 }
+
+// Werk dat na het antwoord mag doorlopen (e-mail versturen). Zo is de responstijd gelijk,
+// ongeacht of een e-mailadres bestaat. Op Vercel houdt waitUntil de functie in leven.
+const pending = new Set();
+export function defer(fn) {
+  const p = Promise.resolve()
+    .then(fn)
+    .catch((err) => console.error("deferred task failed:", err?.message || err))
+    .finally(() => pending.delete(p));
+  pending.add(p);
+  import("@vercel/functions")
+    .then((m) => m.waitUntil(p))
+    .catch(() => {});
+}
+
+// Voor tests: wacht tot alle uitgestelde taken klaar zijn.
+export async function flushDeferred() {
+  while (pending.size) await Promise.all([...pending]);
+}

@@ -1,6 +1,6 @@
 import { config } from "../config.js";
 import { query } from "../db.js";
-import { ApiError, clientIp } from "../http.js";
+import { ApiError, clientIp, defer } from "../http.js";
 import {
   clearSessionCookie,
   createSession,
@@ -11,10 +11,13 @@ import {
   publicUser,
   rateLimit,
   safeEqual,
+  sha256,
   verifyPassword,
 } from "../auth.js";
+import { appUrl, isMailConfigured, passwordChangedEmail, resetEmail, sendMail } from "../mailer.js";
 import { upsertSettings } from "../data-ops.js";
-import { loginSchema, registerSchema } from "../validators.js";
+import { forgotSchema, loginSchema, registerSchema, resetSchema } from "../validators.js";
+import { randomBytes } from "node:crypto";
 
 const MIN15 = 15 * 60 * 1000;
 
@@ -81,13 +84,78 @@ export async function me({ user }) {
 }
 
 export async function health() {
-  const base = { ok: true, configured: true };
+  const base = { ok: true, configured: true, mail: isMailConfigured() };
   try {
     const admins = await query(`SELECT 1 FROM users WHERE role = 'admin' LIMIT 1`);
     return { ...base, ready: true, needsSetup: admins.length === 0 && Boolean(config.setupToken) };
   } catch {
     return { ...base, ready: false, needsSetup: false };
   }
+}
+
+const HOUR = 60 * 60 * 1000;
+const RESET_TTL = HOUR;
+
+// Wachtwoord vergeten: antwoordt altijd hetzelfde, ook als het e-mailadres onbekend is.
+export async function forgot({ req, body }) {
+  const { email: raw } = forgotSchema.parse(body);
+  if (!isMailConfigured()) throw new ApiError(503, "mail_not_configured");
+  await rateLimit(ipKey("forgot", req), 8, HOUR);
+  const email = raw.toLowerCase();
+  const done = { ok: true };
+  try {
+    await rateLimit(`forgot:email:${email}`, 3, HOUR);
+  } catch {
+    return done; // Geen 429: dat zou verraden dat het adres bekend is.
+  }
+
+  const [user] = await query(
+    `SELECT u.id, u.name, u.status, s.settings->>'lang' AS lang
+     FROM users u LEFT JOIN user_settings s ON s.user_id = u.id WHERE u.email = $1`,
+    [email]
+  );
+  if (user && user.status === "active") {
+    // Token maken en mailen gebeurt na het antwoord, zodat de responstijd niets verraadt.
+    defer(async () => {
+      const base = appUrl();
+      if (!base) throw new Error("APP_URL ontbreekt: kan geen resetlink maken");
+      const token = randomBytes(32).toString("base64url");
+      const now = Date.now();
+      await query(`UPDATE password_resets SET used_at = $2 WHERE user_id = $1::uuid AND used_at IS NULL`, [user.id, now]);
+      await query(`INSERT INTO password_resets (user_id, token_hash, created_at, expires_at) VALUES ($1::uuid, $2, $3, $4)`, [
+        user.id,
+        sha256(token),
+        now,
+        now + RESET_TTL,
+      ]);
+      await sendMail({ to: email, ...resetEmail({ lang: user.lang, name: user.name, link: `${base}/#/reset?token=${token}` }) });
+    });
+  }
+  return done;
+}
+
+export async function resetPassword({ req, body }) {
+  const { token, password } = resetSchema.parse(body);
+  await rateLimit(ipKey("reset", req), 10, 15 * 60 * 1000);
+  const now = Date.now();
+  const [row] = await query(
+    `SELECT r.id, r.user_id, u.email, u.name, u.status, s.settings->>'lang' AS lang
+     FROM password_resets r JOIN users u ON u.id = r.user_id LEFT JOIN user_settings s ON s.user_id = u.id
+     WHERE r.token_hash = $1 AND r.used_at IS NULL AND r.expires_at > $2`,
+    [sha256(token), now]
+  );
+  if (!row || row.status !== "active") throw new ApiError(400, "invalid_token");
+  // Eén keer te gebruiken: de eerste die het token opmaakt wint.
+  const claimed = await query(`UPDATE password_resets SET used_at = $2 WHERE id = $1::uuid AND used_at IS NULL RETURNING id`, [row.id, now]);
+  if (!claimed.length) throw new ApiError(400, "invalid_token");
+
+  const hash = await hashPassword(password);
+  await query(`UPDATE users SET password_hash = $2 WHERE id = $1::uuid`, [row.user_id, hash]);
+  await query(`DELETE FROM sessions WHERE user_id = $1::uuid`, [row.user_id]);
+  await query(`UPDATE password_resets SET used_at = $2 WHERE user_id = $1::uuid AND used_at IS NULL`, [row.user_id, now]);
+  await query(`DELETE FROM rate_limits WHERE key = $1`, [`login:email:${row.email}`]);
+  defer(() => sendMail({ to: row.email, ...passwordChangedEmail({ lang: row.lang, name: row.name }) }));
+  return { ok: true };
 }
 
 export const ipForLog = clientIp;

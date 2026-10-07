@@ -1,8 +1,16 @@
 // End-to-end test van de API tegen een in-memory Postgres (PGlite).  npm run test:api
 import { createDevServer } from "./dev-api.mjs";
+import { query } from "../server/db.js";
+import { flushDeferred } from "../server/http.js";
+import { setMailer } from "../server/mailer.js";
 
 process.env.ADMIN_SETUP_TOKEN = "test-setup-token";
+process.env.APP_URL = "https://journal.test";
 const server = await createDevServer({ memory: true });
+const mails = [];
+setMailer(async (m) => {
+  mails.push(m);
+});
 await new Promise((r) => server.listen(0, r));
 const base = `http://localhost:${server.address().port}`;
 
@@ -198,6 +206,100 @@ ok("login is rate limited per email", last.status === 429, String(last.status));
 const regs = new Client();
 for (let i = 0; i < 6; i += 1) last = await regs.req("POST", "/api/auth/register", { email: `u${i}@example.com`, password: "long-enough-password", name: `U${i}`, consent: true });
 ok("registration is rate limited per IP", last.status === 429, String(last.status));
+
+// --- forgot / reset password
+const tokenFrom = (m) => decodeURIComponent(m.text.match(/#\/reset\?token=([^\s]+)/)[1]);
+r = await anon.req("GET", "/api/health");
+ok("health reports mail is configured", r.json.mail === true);
+
+const carol = new Client();
+r = await carol.req("POST", "/api/auth/register", { email: "carol@example.com", password: "carol-long-password", name: "Carol", consent: true, lang: "en" });
+const carolSession = carol.cookie;
+
+mails.length = 0;
+r = await new Client().req("POST", "/api/auth/forgot", { email: "ghost@example.com" });
+await flushDeferred();
+ok("forgot for unknown email answers ok but sends nothing", r.status === 200 && r.json.ok === true && mails.length === 0);
+r = await new Client().req("POST", "/api/auth/forgot", { email: "not-an-email" });
+ok("forgot rejects invalid email", r.status === 400);
+
+r = await new Client().req("POST", "/api/auth/forgot", { email: "Carol@Example.com" });
+await flushDeferred();
+ok("forgot for known email answers the same", r.status === 200 && r.json.ok === true);
+ok("exactly one email, to carol, in English", mails.length === 1 && mails[0].to === "carol@example.com" && /Reset your password/.test(mails[0].subject), JSON.stringify(mails.map((m) => m.subject)));
+ok("link points at the app with a reset token (in the fragment)", /^https:\/\/journal\.test\/#\/reset\?token=/.test(mails[0].text.match(/https:\/\/\S+/)[0]));
+ok("email contains an html button too", /<a href="https:\/\/journal\.test\/#\/reset\?token=/.test(mails[0].html));
+const token1 = tokenFrom(mails[0]);
+const stored = await query(`SELECT token_hash FROM password_resets`);
+ok("only a hash of the token is stored", stored.length === 1 && stored[0].token_hash !== token1 && stored[0].token_hash.length === 64);
+
+r = await new Client().req("POST", "/api/auth/reset", { token: "x".repeat(43), password: "brand-new-password" });
+ok("unknown token rejected", r.status === 400 && r.json.error.code === "invalid_token");
+r = await new Client().req("POST", "/api/auth/reset", { token: token1, password: "short" });
+ok("weak new password rejected", r.status === 400 && r.json.error.code === "invalid_input");
+
+// a second request invalidates the first link
+r = await new Client().req("POST", "/api/auth/forgot", { email: "carol@example.com" });
+await flushDeferred();
+const token2 = tokenFrom(mails[1]);
+r = await new Client().req("POST", "/api/auth/reset", { token: token1, password: "brand-new-password" });
+ok("an older link stops working after a new request", r.status === 400 && r.json.error.code === "invalid_token");
+
+// expired link
+await query(`UPDATE password_resets SET expires_at = 1 WHERE used_at IS NULL`);
+r = await new Client().req("POST", "/api/auth/reset", { token: token2, password: "brand-new-password" });
+ok("expired link rejected", r.status === 400 && r.json.error.code === "invalid_token");
+
+// lock the account out with failed logins, then reset
+const lock = new Client();
+for (let i = 0; i < 9; i += 1) r = await lock.req("POST", "/api/auth/login", { email: "carol@example.com", password: "wrong-password-x" });
+ok("carol is rate limited after failed logins", r.status === 429);
+await new Client().req("POST", "/api/auth/forgot", { email: "carol@example.com" });
+// per-email limit is 3/hour: 3rd request still sends
+await flushDeferred();
+const token3 = tokenFrom(mails[mails.length - 1]);
+mails.length = 0;
+r = await new Client().req("POST", "/api/auth/reset", { token: token3, password: "brand-new-password" });
+await flushDeferred();
+ok("reset succeeds with a fresh token", r.status === 200 && r.json.ok === true, JSON.stringify(r.json));
+ok("a 'password changed' notice is emailed", mails.length === 1 && /changed/i.test(mails[0].subject));
+r = await new Client().req("POST", "/api/auth/reset", { token: token3, password: "another-new-password" });
+ok("a link works only once", r.status === 400 && r.json.error.code === "invalid_token");
+const stale = new Client();
+stale.cookie = carolSession;
+r = await stale.req("GET", "/api/auth/me");
+ok("reset logs out all existing sessions", r.status === 401);
+r = await new Client().req("POST", "/api/auth/login", { email: "carol@example.com", password: "carol-long-password" });
+ok("old password no longer works", r.status === 401);
+r = await new Client().req("POST", "/api/auth/login", { email: "carol@example.com", password: "brand-new-password" });
+ok("new password works and the earlier lockout is cleared", r.status === 200 && r.json.user.name === "Carol");
+
+// the per-email limit answers ok but stays silent
+mails.length = 0;
+for (let i = 0; i < 4; i += 1) await new Client().req("POST", "/api/auth/forgot", { email: "dave-unknown@example.com" });
+const eve = new Client();
+await eve.req("POST", "/api/auth/register", { email: "eve@example.com", password: "eve-long-password!", name: "Eve", consent: true });
+mails.length = 0;
+for (let i = 0; i < 5; i += 1) r = await new Client().req("POST", "/api/auth/forgot", { email: "eve@example.com" });
+await flushDeferred();
+ok("per-email limit: always 200 but at most 3 emails per hour", r.status === 200 && mails.length === 3, String(mails.length));
+
+// deactivated users get no reset email
+const evRow = (await admin.req("GET", "/api/admin/users")).json.users.find((u) => u.email === "eve@example.com");
+await admin.req("PATCH", `/api/admin/users/${evRow.id}`, { status: "disabled" });
+await query(`DELETE FROM rate_limits WHERE key LIKE 'forgot:%'`);
+mails.length = 0;
+await new Client().req("POST", "/api/auth/forgot", { email: "eve@example.com" });
+await flushDeferred();
+ok("deactivated account receives no reset email", mails.length === 0);
+
+// no mail provider configured -> 503, and health says so
+setMailer(null);
+delete process.env.RESEND_API_KEY;
+r = await new Client().req("POST", "/api/auth/forgot", { email: "carol@example.com" });
+ok("without a mail provider forgot answers 503", r.status === 503 && r.json.error.code === "mail_not_configured");
+r = await anon.req("GET", "/api/health");
+ok("health reports mail is not configured", r.json.mail === false);
 
 // --- logout
 r = await admin.req("POST", "/api/auth/logout");

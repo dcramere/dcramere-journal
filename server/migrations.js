@@ -93,6 +93,20 @@ export const MIGRATIONS = [
       )`,
     ],
   },
+  {
+    id: "002_password_resets",
+    statements: [
+      `CREATE TABLE IF NOT EXISTS password_resets (
+        id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+        user_id uuid NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+        token_hash text NOT NULL UNIQUE,
+        created_at bigint NOT NULL,
+        expires_at bigint NOT NULL,
+        used_at bigint
+      )`,
+      `CREATE INDEX IF NOT EXISTS password_resets_user_idx ON password_resets(user_id)`,
+    ],
+  },
 ];
 
 // `run(text, params)` voert één statement uit en geeft rijen terug.

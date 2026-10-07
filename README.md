@@ -90,7 +90,30 @@ full journal, **read only**. Without a database the app keeps running in local m
    scherm gesloten: er kan nooit een tweede beheerder via de setup-code bij. / Open `/#/setup` and create the admin; it closes
    itself once an admin exists.
 
-Zet de setup-code **nooit** in de chat of in de code; alleen in Vercel. / Never put the setup code in chat or in code.
+5. **E-mail voor "wachtwoord vergeten" (optioneel maar aan te raden) / Email for "forgot password"** — maak een account op
+   [resend.com](https://resend.com), verifieer je domein (DNS-records) en maak een API-key. Voeg daarna in Vercel toe: /
+   Create a Resend account, verify your domain and create an API key. Then add in Vercel:
+
+   | Variabele / Variable | Waarde / Value |
+   |---|---|
+   | `RESEND_API_KEY` | de API-key uit Resend / the API key from Resend |
+   | `MAIL_FROM` | `DCRAMERE Journal <journal@jouwdomein.nl>` (een adres op je geverifieerde domein / an address on your verified domain) |
+   | `APP_URL` | `https://dcramere-journal.vercel.app` (of je eigen domein / or your own domain) |
+
+   Zolang deze variabelen ontbreken, ziet de klant de link "Wachtwoord vergeten?" niet. Het afzenderadres
+   `onboarding@resend.dev` van Resend bezorgt alleen aan je eigen Resend-adres; handig om de flow te proberen vóór je domein
+   is geverifieerd. / Until these are set, the "Forgot your password?" link is hidden. Resend's `onboarding@resend.dev` sender only
+   delivers to your own Resend address, which is handy for trying the flow before your domain is verified.
+
+Zet de setup-code en de API-key **nooit** in de chat of in de code; alleen in Vercel. / Never put the setup code or the API key in chat or in code.
+
+**Hoe wachtwoord vergeten werkt / How forgot-password works:** de klant vraagt een link aan; de app antwoordt altijd hetzelfde (ook bij een
+onbekend adres) en mailt, als het account bestaat, een link die 1 uur geldig is en één keer werkt. Het token staat alleen als hash in de
+database en in het URL-fragment (`#/reset?token=…`), dus het komt niet in serverlogs. Na het kiezen van een nieuw wachtwoord wordt de klant
+overal uitgelogd, een eventuele inlogblokkade wordt opgeheven en er gaat een "wachtwoord gewijzigd"-mail uit. Maximaal 3 aanvragen per uur
+per e-mailadres. / The client requests a link; the app always answers the same (even for unknown addresses) and emails a 1-hour, single-use
+link if the account exists. Only a hash is stored; the token lives in the URL fragment so it never reaches server logs. After resetting, all
+sessions are revoked, any login lockout is lifted and a "password changed" notice is sent. Max 3 requests per hour per address.
 
 ### Hoe het werkt / How it works
 
@@ -102,9 +125,10 @@ Zet de setup-code **nooit** in de chat of in de code; alleen in Vercel. / Never 
 - Elke klant ziet alleen zijn eigen rijen (alle queries filteren op `user_id`; ids zijn per gebruiker uniek).
 - Bestaand lokaal journal in de browser? Na het inloggen biedt de app aan om het in je account te importeren. / Existing local
   journal? After logging in the app offers to import it into your account.
-- **Nog niet aanwezig / Not included yet:** wachtwoord vergeten en e-mailverificatie (daar is een e-mailprovider voor nodig, bijv. Resend).
-  Vrij registreren betekent dat iedereen met een link een account kan maken; de beheerder kan accounts deactiveren. / Password reset and
-  email verification (needs an email provider). Open sign-up means anyone with the link can register; the admin can deactivate accounts.
+- **Nog niet aanwezig / Not included yet:** e-mailverificatie bij registratie (het e-mailadres wordt nu niet bevestigd) en een wachtwoord wijzigen
+  terwijl je ingelogd bent. Vrij registreren betekent dat iedereen met een link een account kan maken; de beheerder kan accounts deactiveren. /
+  Email verification at sign-up and changing your password while logged in. Open sign-up means anyone with the link can register; the admin can
+  deactivate accounts.
 
 ### Lokaal ontwikkelen / Local development
 

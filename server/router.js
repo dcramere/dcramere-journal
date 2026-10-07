@@ -22,6 +22,8 @@ add("GET", "/api/health", "none", authRoutes.health);
 add("POST", "/api/auth/register", "none", authRoutes.register);
 add("POST", "/api/auth/login", "none", authRoutes.login);
 add("POST", "/api/auth/logout", "none", authRoutes.logout);
+add("POST", "/api/auth/forgot", "none", authRoutes.forgot);
+add("POST", "/api/auth/reset", "none", authRoutes.resetPassword);
 add("GET", "/api/auth/me", "user", authRoutes.me);
 
 add("GET", "/api/data", "user", dataRoutes.getData);

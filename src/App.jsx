@@ -195,7 +195,7 @@ export default function App() {
       } catch {
         // Niet ingelogd.
       }
-      if (alive) setBoot({ status: "server", needsSetup: health.needsSetup });
+      if (alive) setBoot({ status: "server", needsSetup: health.needsSetup, mail: Boolean(health.mail) });
     })();
     return () => {
       alive = false;
@@ -235,9 +235,14 @@ export default function App() {
   }
   if (boot.status === "local") return <LocalApp tab={route.name === "own" ? route.tab : "journal"} onLang={onLang} lang={lang} />;
 
+  // De link uit de e-mail: werkt ook als je (nog) ingelogd bent.
+  if (route.name === "reset") {
+    return <AuthScreen key={`reset-${route.token}`} lang={lang} onLang={onLang} onAuthed={authed} resetToken={route.token} mail={boot.mail} />;
+  }
+
   if (!user) {
     const setup = route.name === "setup";
-    return <AuthScreen key={setup ? "setup" : "login"} lang={lang} onLang={onLang} onAuthed={authed} setup={setup} needsSetup={boot.needsSetup} />;
+    return <AuthScreen key={setup ? "setup" : "login"} lang={lang} onLang={onLang} onAuthed={authed} setup={setup} needsSetup={boot.needsSetup} mail={boot.mail} />;
   }
 
   if (adminRoute && user.role !== "admin") {

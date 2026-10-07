@@ -19,6 +19,8 @@ const MESSAGES = {
   last_admin: T("Je bent de enige beheerder en kunt je account niet verwijderen."),
   not_configured: T("De server is nog niet ingesteld."),
   unknown_account: T("Onbekend account."),
+  invalid_token: T("Deze link is ongeldig of verlopen. Vraag een nieuwe aan."),
+  mail_not_configured: T("E-mail is nog niet ingesteld op de server."),
 };
 
 export function errorText(code) {

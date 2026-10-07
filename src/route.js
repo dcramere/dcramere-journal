@@ -2,8 +2,10 @@
 export const TAB_IDS = ["import", "journal", "trades", "stats"];
 
 export function parseRoute() {
-  const parts = window.location.hash.replace(/^#\/?/, "").split("/").filter(Boolean);
+  const [path, queryString = ""] = window.location.hash.replace(/^#\/?/, "").split("?");
+  const parts = path.split("/").filter(Boolean);
   if (parts[0] === "setup") return { name: "setup" };
+  if (parts[0] === "reset") return { name: "reset", token: new URLSearchParams(queryString).get("token") || "" };
   if (parts[0] === "admin") {
     if (parts[1] === "user" && parts[2]) return { name: "client", id: parts[2], tab: TAB_IDS.includes(parts[3]) ? parts[3] : "journal" };
     return { name: "admin" };

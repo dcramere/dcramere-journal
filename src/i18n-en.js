@@ -463,5 +463,17 @@ export const EN = {
   "Je bent de enige beheerder en kunt je account niet verwijderen.": "You are the only admin and cannot delete your account.",
   "De server is nog niet ingesteld.": "The server has not been set up yet.",
   "Onbekend account.": "Unknown account.",
-  "Naar vorige maand": "Previous month"
+  "Naar vorige maand": "Previous month",
+  "Deze link is ongeldig of verlopen. Vraag een nieuwe aan.": "This link is invalid or has expired. Request a new one.",
+  "E-mail is nog niet ingesteld op de server.": "Email has not been set up on the server yet.",
+  "De twee wachtwoorden zijn niet gelijk.": "The two passwords do not match.",
+  "Nieuw wachtwoord kiezen": "Choose a new password",
+  "Wachtwoord vergeten": "Forgot password",
+  "Wachtwoord vergeten?": "Forgot your password?",
+  "Wachtwoord opslaan": "Save password",
+  "Stuur me een link": "Send me a link",
+  "Bestaat er een account met dit e-mailadres, dan hebben we een link gestuurd om een nieuw wachtwoord te kiezen. De link is 1 uur geldig. Kijk ook in je spam.": "If an account exists for this email address, we have sent a link to choose a new password. The link is valid for 1 hour. Check your spam folder too.",
+  "Je wachtwoord is gewijzigd. Je kunt nu inloggen met je nieuwe wachtwoord.": "Your password has been changed. You can now log in with your new password.",
+  "Nieuw wachtwoord (minimaal 10 tekens)": "New password (at least 10 characters)",
+  "Herhaal nieuw wachtwoord": "Repeat new password"
 };

@@ -6,9 +6,13 @@ import http from "node:http";
 import { PGlite } from "@electric-sql/pglite";
 import { setDatabase } from "../server/db.js";
 import { migrate } from "../server/migrations.js";
+import { setMailer } from "../server/mailer.js";
 import { handle } from "../server/router.js";
 
 process.env.ADMIN_SETUP_TOKEN = process.env.ADMIN_SETUP_TOKEN || "dev-setup-token";
+process.env.APP_URL = process.env.APP_URL || "http://localhost:5173";
+// Lokaal worden e-mails niet verstuurd maar in de console getoond (inclusief de resetlink).
+setMailer(async (m) => console.log(`\n[dev-mail] naar ${m.to} — ${m.subject}\n${m.text}`));
 
 export async function createDevServer({ memory = false } = {}) {
   const pg = memory ? new PGlite() : new PGlite("./.dev-db");

@@ -15,7 +15,7 @@ import {
   sha256,
   verifyPassword,
 } from "../auth.js";
-import { appUrl, isMailConfigured, passwordChangedEmail, resetEmail, sendMail } from "../mailer.js";
+import { appUrl, canMailClients, isMailConfigured, newClientEmail, passwordChangedEmail, resetEmail, sendMail } from "../mailer.js";
 import { upsertSettings } from "../data-ops.js";
 import { forgotSchema, loginSchema, registerSchema, resetSchema } from "../validators.js";
 
@@ -51,6 +51,7 @@ export async function register({ req, res, body }) {
   }
   if (input.lang) await upsertSettings(user.id, { lang: input.lang });
   await createSession(req, res, user.id);
+  if (role === "client") defer(() => notifyNewClient(user));
   return [201, { user: publicUser(user) }];
 }
 
@@ -84,12 +85,37 @@ export async function me({ user }) {
 }
 
 export async function health() {
-  const base = { ok: true, configured: true, mail: isMailConfigured() };
+  const base = { ok: true, configured: true, mail: canMailClients() };
   try {
     const admins = await query(`SELECT 1 FROM users WHERE role = 'admin' LIMIT 1`);
     return { ...base, ready: true, needsSetup: admins.length === 0 && Boolean(config.setupToken) };
   } catch {
     return { ...base, ready: false, needsSetup: false };
+  }
+}
+
+// Meldt een nieuwe klant aan de beheerder(s): ADMIN_NOTIFY_EMAIL (komma-gescheiden) of anders het
+// e-mailadres van elke actieve beheerder. Maximaal 10 meldingen per uur, zodat massa-aanmeldingen je inbox niet vullen.
+async function notifyNewClient(user) {
+  if (!isMailConfigured()) return;
+  try {
+    await rateLimit("notify:new-client", 10, 60 * 60 * 1000);
+  } catch {
+    return;
+  }
+  const custom = (process.env.ADMIN_NOTIFY_EMAIL || "")
+    .split(",")
+    .map((s) => s.trim())
+    .filter(Boolean);
+  const admins = await query(
+    `SELECT u.email, s.settings->>'lang' AS lang FROM users u LEFT JOIN user_settings s ON s.user_id = u.id
+     WHERE u.role = 'admin' AND u.status = 'active'`
+  );
+  const [{ n }] = await query(`SELECT count(*) AS n FROM users WHERE role = 'client' AND status = 'active'`);
+  const base = appUrl();
+  const recipients = custom.length ? custom.map((email) => ({ email, lang: admins[0]?.lang })) : admins;
+  for (const to of recipients) {
+    await sendMail({ to: to.email, ...newClientEmail({ lang: to.lang, name: user.name, email: user.email, total: Number(n), link: base ? `${base}/#/admin` : null }) });
   }
 }
 
@@ -99,7 +125,7 @@ const RESET_TTL = HOUR;
 // Wachtwoord vergeten: antwoordt altijd hetzelfde, ook als het e-mailadres onbekend is.
 export async function forgot({ req, body }) {
   const { email: raw } = forgotSchema.parse(body);
-  if (!isMailConfigured()) throw new ApiError(503, "mail_not_configured");
+  if (!canMailClients()) throw new ApiError(503, "mail_not_configured");
   await rateLimit(ipKey("forgot", req), 8, HOUR);
   const email = raw.toLowerCase();
   const done = { ok: true };

@@ -124,6 +124,21 @@ In `#/admin` every client has a *Reset link* button that creates a single-use, 2
 place where the admin can do more than read (such a link can in principle take over an account), so every link is logged, visible to the
 client under *Privacy and account*, and the client consents to it at sign-up.
 
+### Melding bij een nieuwe klant / New-client notification
+
+**NL** — Zodra iemand zich als klant aanmeldt, krijg je een e-mail met naam, e-mailadres en het aantal klanten, met een knop naar je dashboard.
+Dit werkt ook **zonder eigen domein**: zet in Vercel `RESEND_API_KEY` en `RESEND_FROM_EMAIL` = `DCRAMERE Journal <onboarding@resend.dev>` (het testadres van
+Resend). Dat testadres bezorgt alleen aan het e-mailadres van je Resend-account, en dat is precies jouw adres. Staat jouw beheerdersaccount op een ander
+adres dan je Resend-account, zet dan `ADMIN_NOTIFY_EMAIL` op het adres van je Resend-account (meerdere adressen: komma-gescheiden). Met het testadres
+gaan er bewust **geen** mails naar klanten (de link "Wachtwoord vergeten?" blijft verborgen); dat komt pas met een geverifieerd domein. Meldingen zijn
+begrensd tot 10 aanmeldingen per uur, zodat een stroom nep-aanmeldingen je inbox niet vult; ze staan altijd in je dashboard.
+
+**EN** — Whenever someone signs up as a client you get an email with their name, email address and the client count, with a button to your dashboard. This
+works **without your own domain**: set `RESEND_API_KEY` and `RESEND_FROM_EMAIL` = `DCRAMERE Journal <onboarding@resend.dev>` in Vercel. Resend's test sender only
+delivers to your Resend account's email address, which is you. If your admin account uses a different address, set `ADMIN_NOTIFY_EMAIL` to your Resend
+account address (comma-separated for several). With the test sender no mail goes to clients (the "Forgot your password?" link stays hidden) until a
+domain is verified. Notifications are capped at 10 signups an hour so a flood of fake signups cannot fill your inbox; they are always in your dashboard.
+
 ### Automatische rapporten / Automatic reports
 
 **NL** — Elke klant krijgt per afgeronde week en maand een rapport met de openingszin (eindresultaat, en het verschil met de vorige periode), **wat goed

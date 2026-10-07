@@ -13,6 +13,13 @@ export function isMailConfigured() {
   return Boolean(override || (process.env.RESEND_API_KEY && fromAddress()));
 }
 
+// Mag er naar klanten gemaild worden? Met het Resend-testadres (@resend.dev) bezorgt Resend alleen aan
+// de eigenaar van het Resend-account; dan zijn alleen meldingen aan de beheerder zinvol.
+export function canMailClients() {
+  if (override) return true;
+  return isMailConfigured() && !/@resend\.dev\b/i.test(fromAddress());
+}
+
 // Basis-URL van de site, voor de link in de e-mail. Nooit uit de Host-header afleiden.
 export function appUrl() {
   const explicit = process.env.APP_URL;
@@ -74,6 +81,22 @@ export function resetEmail({ lang, name, link }) {
       <p style="margin:0 0 20px"><a href="${esc(link)}" style="background:#D4AF37;color:#0A0A0A;text-decoration:none;font-weight:bold;padding:11px 18px;border-radius:8px;display:inline-block">${esc(c.resetButton)}</a></p>
       <p style="margin:0 0 6px;color:#8C8577;font-size:12px;word-break:break-all">${esc(link)}</p>
       <p style="margin:16px 0 0;color:#8C8577;font-size:12px;line-height:1.5">${esc(c.resetIgnore)}</p>`),
+  };
+}
+
+export function newClientEmail({ lang, name, email, total, link }) {
+  const nl = lang !== "en";
+  const subject = nl ? `Nieuwe klant: ${name} — DCRAMERE Journal` : `New client: ${name} — DCRAMERE Journal`;
+  const line = nl
+    ? `${name} (${email}) heeft zich zojuist aangemeld. Je hebt nu ${total} ${total === 1 ? "klant" : "klanten"}.`
+    : `${name} (${email}) just signed up. You now have ${total} ${total === 1 ? "client" : "clients"}.`;
+  const button = nl ? "Open je dashboard" : "Open your dashboard";
+  return {
+    subject,
+    text: `${line}\n${link ? `\n${link}\n` : ""}`,
+    html: shell(`
+      <p style="margin:0 0 16px;line-height:1.5">${esc(line)}</p>
+      ${link ? `<p style="margin:0"><a href="${esc(link)}" style="background:#D4AF37;color:#0A0A0A;text-decoration:none;font-weight:bold;padding:11px 18px;border-radius:8px;display:inline-block">${esc(button)}</a></p>` : ""}`),
   };
 }
 

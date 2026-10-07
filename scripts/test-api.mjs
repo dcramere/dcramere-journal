@@ -10,8 +10,10 @@ process.env.ADMIN_SETUP_TOKEN = "test-setup-token";
 process.env.APP_URL = "https://journal.test";
 const server = await createDevServer({ memory: true });
 const mails = [];
+const notified = []; // alle "nieuwe klant"-meldingen, ook nadat `mails` is leeggemaakt
 setMailer(async (m) => {
   mails.push(m);
+  if (/Nieuwe klant|New client/.test(m.subject)) notified.push(m);
 });
 await new Promise((r) => server.listen(0, r));
 const base = `http://localhost:${server.address().port}`;
@@ -34,6 +36,7 @@ class Client {
       headers: { "Content-Type": "application/json", "X-DJ-CSRF": "1", "X-Forwarded-For": this.ip, ...(this.cookie ? { Cookie: this.cookie } : {}), ...headers },
       body: body === undefined ? undefined : JSON.stringify(body),
     });
+    if (path === "/api/auth/register") await flushDeferred(); // meldingen na een registratie zijn dan klaar
     const set = res.headers.get("set-cookie");
     if (set) this.cookie = set.split(";")[0].endsWith("=") ? "" : set.split(";")[0];
     let json = null;
@@ -81,9 +84,20 @@ ok("client registers (email normalised)", r.status === 201 && r.json.user.email 
 r = await new Client().req("POST", "/api/auth/register", { email: "alice@example.com", password: "another-long-password", name: "Dup", consent: true });
 ok("duplicate email rejected", r.status === 409 && r.json.error.code === "email_taken");
 
+ok("a new client notifies the admin by email (Dutch, to the admin's address)", notified.length === 1 && notified[0].to === "dino@example.com" && /Nieuwe klant: Alice/.test(notified[0].subject), JSON.stringify(notified.map((m) => [m.to, m.subject])));
+ok("the notification links to the dashboard and shows the count", /#\/admin/.test(notified[0].text) && /1 klant\b/.test(notified[0].text), notified[0].text);
+ok("the admin's own setup is not announced", !notified.some((m) => /Dino/.test(m.subject)));
+
 const bob = new Client();
 r = await bob.req("POST", "/api/auth/register", { email: "bob@example.com", password: "bob-long-password!", name: "Bob", consent: true });
 ok("second client registers", r.status === 201);
+ok("each new client gets announced", notified.length === 2 && /Bob/.test(notified[1].subject) && /2 klanten/.test(notified[1].text));
+
+process.env.ADMIN_NOTIFY_EMAIL = "owner@example.com, second@example.com";
+const before = notified.length;
+await new Client().req("POST", "/api/auth/register", { email: "notify1@example.com", password: "notify-long-password", name: "Notify One", consent: true });
+ok("ADMIN_NOTIFY_EMAIL overrides the recipients", notified.length === before + 2 && notified.slice(before).map((m) => m.to).sort().join() === "owner@example.com,second@example.com", JSON.stringify(notified.slice(before).map((m) => m.to)));
+delete process.env.ADMIN_NOTIFY_EMAIL;
 
 // --- auth
 r = await new Client().req("GET", "/api/data");
@@ -150,7 +164,7 @@ ok("anonymous cannot list users", r.status === 401);
 r = await admin.req("GET", "/api/admin/users");
 const users = r.json.users;
 const aliceRow = users.find((u) => u.email === "alice@example.com");
-ok("admin lists all 3 users", r.status === 200 && users.length === 3);
+ok("admin lists all 4 users", r.status === 200 && users.length === 4);
 ok("admin sees alice's aggregates", aliceRow.trades === 3 && Math.abs(aliceRow.net - 105) < 1e-9 && aliceRow.wins === 2 && aliceRow.losses === 1 && aliceRow.accounts === 1, JSON.stringify(aliceRow));
 ok("admin sees last trade date", typeof aliceRow.lastTradeAt === "number");
 r = await admin.req("GET", `/api/admin/users/${aliceRow.id}/data`);
@@ -198,7 +212,7 @@ ok("client deletes own account", r.status === 200);
 r = await bob.req("GET", "/api/data");
 ok("deleted account's session is gone", r.status === 401);
 r = await admin.req("GET", "/api/admin/users");
-ok("deleted user vanishes from admin list", r.json.users.length === 2);
+ok("deleted user vanishes from admin list", r.json.users.length === 3);
 
 // --- rate limiting
 const spam = new Client();
@@ -446,6 +460,23 @@ r = await new Client().req("POST", "/api/auth/forgot", { email: "carol@example.c
 ok("without a mail provider forgot answers 503", r.status === 503 && r.json.error.code === "mail_not_configured");
 r = await anon.req("GET", "/api/health");
 ok("health reports mail is not configured", r.json.mail === false);
+
+// --- notifications are capped so a signup flood cannot fill the inbox
+ok("new-client notifications are capped at 10 signups per hour", new Set(notified.map((m) => m.subject)).size === 10, String(new Set(notified.map((m) => m.subject)).size));
+
+// --- the Resend test sender mails only the owner: clients get no reset mail, admin notifications stay possible
+setMailer(null);
+process.env.RESEND_API_KEY = "re_test";
+process.env.RESEND_FROM_EMAIL = "DCRAMERE Journal <onboarding@resend.dev>";
+r = await anon.req("GET", "/api/health");
+ok("with the test sender, client mail is reported as unavailable", r.json.mail === false);
+r = await new Client().req("POST", "/api/auth/forgot", { email: "carol@example.com" });
+ok("with the test sender, forgot-password answers 503", r.status === 503);
+process.env.RESEND_FROM_EMAIL = "DCRAMERE Journal <journal@real-domain.example>";
+r = await anon.req("GET", "/api/health");
+ok("with a real domain, client mail is available", r.json.mail === true);
+delete process.env.RESEND_API_KEY;
+delete process.env.RESEND_FROM_EMAIL;
 
 // --- logout
 r = await admin.req("POST", "/api/auth/logout");

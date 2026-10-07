@@ -4,7 +4,7 @@ import { api } from "../api.js";
 import { COLORS, MONO, toneColor } from "../theme.js";
 import { tr } from "../i18n.js";
 import { money, pct, relativeDay } from "../lib/format.js";
-import { Button, Card, Empty, Segmented, Select } from "../ui/primitives.jsx";
+import { Button, Card, Empty, Modal, Segmented, Select } from "../ui/primitives.jsx";
 
 const SORTS = [
   { value: "activity", label: "Laatste activiteit" },
@@ -51,6 +51,8 @@ export function AdminView({ currentUserId }) {
   const [sort, setSort] = useState("activity");
   const [status, setStatus] = useState("all");
   const [busyId, setBusyId] = useState(null);
+  const [link, setLink] = useState(null); // { name, url, expiresAt }
+  const [copied, setCopied] = useState(false);
 
   const load = useCallback(async () => {
     setError("");
@@ -98,6 +100,29 @@ export function AdminView({ currentUserId }) {
       setError(e.message);
     } finally {
       setBusyId(null);
+    }
+  }
+
+  async function makeLink(u) {
+    setBusyId(u.id);
+    setError("");
+    try {
+      const { token, expiresAt } = await api.post(`/api/admin/users/${u.id}/reset-link`);
+      setCopied(false);
+      setLink({ name: u.name, url: `${window.location.origin}/#/reset?token=${token}`, expiresAt });
+    } catch (e) {
+      setError(e.message);
+    } finally {
+      setBusyId(null);
+    }
+  }
+
+  async function copyLink() {
+    try {
+      await navigator.clipboard.writeText(link.url);
+      setCopied(true);
+    } catch {
+      document.getElementById("reset-link-input")?.select();
     }
   }
 
@@ -208,6 +233,11 @@ export function AdminView({ currentUserId }) {
                   >
                     {tr("Open")}
                   </a>
+                  {u.role !== "admin" && u.status === "active" && (
+                    <Button onClick={() => makeLink(u)} disabled={busyId === u.id}>
+                      {tr("Resetlink")}
+                    </Button>
+                  )}
                   {u.role !== "admin" && (
                     <Button onClick={() => toggle(u)} disabled={busyId === u.id}>
                       {u.status === "active" ? tr("Deactiveren") : tr("Activeren")}
@@ -223,6 +253,39 @@ export function AdminView({ currentUserId }) {
       <p className="text-[11px]" style={{ color: COLORS.textMuted }}>
         {tr("Je kunt journals alleen lezen. Elk bezoek aan het journal van een klant wordt vastgelegd en is zichtbaar voor die klant.")}
       </p>
+
+      {link && (
+        <Modal title={tr("Resetlink voor {name}", { name: link.name })} onClose={() => setLink(null)}>
+          <div className="flex flex-col gap-3 text-xs" style={{ color: COLORS.textMuted }}>
+            <p>{tr("Stuur deze link zelf naar de klant (bijvoorbeeld via WhatsApp). Met de link kiest de klant een nieuw wachtwoord. Hij werkt één keer en is 24 uur geldig; een eerdere link van deze klant vervalt.")}</p>
+            <input
+              id="reset-link-input"
+              readOnly
+              value={link.url}
+              onFocus={(e) => e.target.select()}
+              className="rounded-lg px-3 py-2 text-xs w-full"
+              style={{ background: COLORS.inputBg, border: `1px solid ${COLORS.cardBorder}`, color: COLORS.text, fontFamily: MONO }}
+            />
+            <div className="flex flex-wrap gap-2">
+              <button type="button" onClick={copyLink} className="rounded-lg px-3 py-1.5 text-xs font-bold" style={{ background: COLORS.gold, color: "#0A0A0A" }}>
+                {copied ? tr("Gekopieerd") : tr("Link kopiëren")}
+              </button>
+              <a
+                href={`https://wa.me/?text=${encodeURIComponent(
+                  tr("Hoi {name}, hier is je link om een nieuw wachtwoord te kiezen voor DCRAMERE Journal (24 uur geldig, één keer te gebruiken): {link}", { name: link.name, link: link.url })
+                )}`}
+                target="_blank"
+                rel="noreferrer"
+                className="rounded-lg px-3 py-1.5 text-xs font-semibold"
+                style={{ background: COLORS.inputBg, border: `1px solid ${COLORS.cardBorder}`, color: COLORS.text }}
+              >
+                {tr("Deel via WhatsApp")}
+              </a>
+            </div>
+            <p className="text-[11px]">{tr("Dit wordt vastgelegd en is zichtbaar voor de klant. Na het gebruik van de link wordt de klant overal uitgelogd.")}</p>
+          </div>
+        </Modal>
+      )}
     </div>
   );
 }

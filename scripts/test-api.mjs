@@ -293,6 +293,58 @@ await new Client().req("POST", "/api/auth/forgot", { email: "eve@example.com" })
 await flushDeferred();
 ok("deactivated account receives no reset email", mails.length === 0);
 
+// --- admin-created reset link (no email needed)
+const zed = new Client();
+await zed.req("POST", "/api/auth/register", { email: "zed@example.com", password: "zed-old-password!", name: "Zed", consent: true });
+const zedSession = zed.cookie;
+const zedRow = (await admin.req("GET", "/api/admin/users")).json.users.find((u) => u.email === "zed@example.com");
+const adminSelf = (await admin.req("GET", "/api/auth/me")).json.user;
+
+r = await zed.req("POST", `/api/admin/users/${zedRow.id}/reset-link`);
+ok("a client cannot create reset links", r.status === 403);
+r = await new Client().req("POST", `/api/admin/users/${zedRow.id}/reset-link`);
+ok("anonymous cannot create reset links", r.status === 401);
+r = await admin.req("POST", `/api/admin/users/${adminSelf.id}/reset-link`);
+ok("admin cannot create a link for themselves/admins", r.status === 400 || r.status === 403);
+r = await admin.req("POST", `/api/admin/users/not-a-uuid/reset-link`);
+ok("bad id -> 404", r.status === 404);
+
+mails.length = 0;
+r = await admin.req("POST", `/api/admin/users/${zedRow.id}/reset-link`);
+ok("admin creates a reset link", r.status === 200 && typeof r.json.token === "string" && r.json.token.length >= 40, JSON.stringify(r.json));
+const hours = (r.json.expiresAt - Date.now()) / 3600000;
+ok("admin link is valid for about 24 hours", hours > 23.9 && hours <= 24.01, String(hours));
+const adminToken = r.json.token;
+r = await new Client().req("POST", "/api/auth/reset", { token: adminToken, password: "zed-new-password!" });
+ok("the client can use the link to choose a new password", r.status === 200);
+r = await new Client().req("POST", "/api/auth/reset", { token: adminToken, password: "zed-other-password" });
+ok("the admin link works only once", r.status === 400 && r.json.error.code === "invalid_token");
+const zedStale = new Client();
+zedStale.cookie = zedSession;
+r = await zedStale.req("GET", "/api/auth/me");
+ok("using the link logs the client out everywhere", r.status === 401);
+r = await new Client().req("POST", "/api/auth/login", { email: "zed@example.com", password: "zed-new-password!" });
+ok("client logs in with the new password", r.status === 200);
+
+// the action is logged and visible to the client
+const zed2 = new Client();
+await zed2.req("POST", "/api/auth/login", { email: "zed@example.com", password: "zed-new-password!" });
+r = await zed2.req("GET", "/api/me/access-log");
+ok("the client sees that the admin made a reset link", r.json.entries.some((e) => e.action === "reset_link" && e.actor === "Dino"), JSON.stringify(r.json));
+
+// a new link replaces the previous one; disabled clients get none
+r = await admin.req("POST", `/api/admin/users/${zedRow.id}/reset-link`);
+const l1 = r.json.token;
+r = await admin.req("POST", `/api/admin/users/${zedRow.id}/reset-link`);
+const l2 = r.json.token;
+r = await new Client().req("POST", "/api/auth/reset", { token: l1, password: "zed-third-password!" });
+ok("an older admin link is invalidated by a newer one", r.status === 400);
+await admin.req("PATCH", `/api/admin/users/${zedRow.id}`, { status: "disabled" });
+r = await admin.req("POST", `/api/admin/users/${zedRow.id}/reset-link`);
+ok("no link for a deactivated client", r.status === 409 && r.json.error.code === "user_disabled");
+r = await new Client().req("POST", "/api/auth/reset", { token: l2, password: "zed-fourth-password!" });
+ok("an existing link stops working when the client is deactivated", r.status === 400);
+
 // no mail provider configured -> 503, and health says so
 setMailer(null);
 delete process.env.RESEND_API_KEY;

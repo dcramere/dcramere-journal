@@ -173,7 +173,7 @@ export function AuthScreen({ lang, onLang, onAuthed, setup = false, needsSetup =
                 <label className="flex items-start gap-2 text-xs leading-relaxed" style={{ color: COLORS.textMuted }}>
                   <input type="checkbox" checked={f.consent} onChange={(e) => set("consent", e.target.checked)} className="mt-0.5" required />
                   <span>
-                    {tr("Ik begrijp dat de beheerder (mijn coach) mijn journal kan bekijken, alleen lezen, en dat elk bezoek wordt vastgelegd. Ik kan dit zelf terugzien en mijn account op elk moment verwijderen.")}
+                    {tr("Ik begrijp dat de beheerder (mijn coach) mijn journal kan bekijken, alleen lezen, dat de beheerder bij een vergeten wachtwoord een resetlink voor me kan maken, en dat elk bezoek of elke link wordt vastgelegd. Ik kan dit zelf terugzien en mijn account op elk moment verwijderen.")}
                   </span>
                 </label>
               )}
@@ -202,6 +202,11 @@ export function AuthScreen({ lang, onLang, onAuthed, setup = false, needsSetup =
                 <button type="button" onClick={() => switchMode("forgot")} className="text-[11px] text-center" style={linkStyle}>
                   {tr("Wachtwoord vergeten?")}
                 </button>
+              )}
+              {view === "login" && !mail && (
+                <p className="text-[11px] text-center" style={linkStyle}>
+                  {tr("Wachtwoord kwijt? Vraag je coach om een resetlink.")}
+                </p>
               )}
             </>
           )}

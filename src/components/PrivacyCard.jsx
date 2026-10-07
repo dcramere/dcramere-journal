@@ -55,14 +55,18 @@ export function PrivacyCard({ user, onDeleted }) {
         <div className="flex flex-col gap-1 mb-1">
           {entries.slice(0, 10).map((e) => (
             <div key={`${e.at}-${e.actor}`} className="flex justify-between gap-2 text-xs" style={{ color: COLORS.textMuted }}>
-              <span>{tr("{name} (beheerder) bekeek je journal", { name: e.actor || tr("De beheerder") })}</span>
+              <span>
+                {e.action === "reset_link"
+                  ? tr("{name} (beheerder) maakte een resetlink voor je wachtwoord aan", { name: e.actor || tr("De beheerder") })
+                  : tr("{name} (beheerder) bekeek je journal", { name: e.actor || tr("De beheerder") })}
+              </span>
               <span style={{ fontFamily: MONO }}>{dateTimeLabel(e.at)}</span>
             </div>
           ))}
         </div>
       )}
       <p className="text-[11px] mt-2 mb-3" style={{ color: COLORS.textMuted }}>
-        {tr("De beheerder kan je journal alleen lezen, niet aanpassen.")}
+        {tr("De beheerder kan je journal alleen lezen, niet aanpassen. Vergeet je je wachtwoord, dan kan de beheerder een resetlink voor je maken; dat wordt hier ook getoond.")}
       </p>
 
       {error && (

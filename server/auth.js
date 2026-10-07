@@ -98,6 +98,20 @@ export async function requireAdmin(req) {
   return user;
 }
 
+// Maakt een eenmalig resettoken (alleen de hash wordt bewaard) en maakt oudere tokens van die gebruiker ongeldig.
+export async function issueResetToken(userId, ttlMs) {
+  const token = randomBytes(32).toString("base64url");
+  const now = Date.now();
+  await query(`UPDATE password_resets SET used_at = $2 WHERE user_id = $1::uuid AND used_at IS NULL`, [userId, now]);
+  await query(`INSERT INTO password_resets (user_id, token_hash, created_at, expires_at) VALUES ($1::uuid, $2, $3, $4)`, [
+    userId,
+    sha256(token),
+    now,
+    now + ttlMs,
+  ]);
+  return { token, expiresAt: now + ttlMs };
+}
+
 // Teller per venster; gooit 429 als de limiet is bereikt.
 export async function rateLimit(key, limit, windowMs) {
   const now = Date.now();

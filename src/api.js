@@ -20,6 +20,7 @@ const MESSAGES = {
   not_configured: T("De server is nog niet ingesteld."),
   unknown_account: T("Onbekend account."),
   invalid_token: T("Deze link is ongeldig of verlopen. Vraag een nieuwe aan."),
+  user_disabled: T("Deze klant is gedeactiveerd. Activeer de klant eerst."),
   mail_not_configured: T("E-mail is nog niet ingesteld op de server."),
 };
 

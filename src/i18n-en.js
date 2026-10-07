@@ -401,7 +401,6 @@ export const EN = {
   "Wachtwoord (minimaal 10 tekens)": "Password (at least 10 characters)",
   "Wachtwoord": "Password",
   "Setup-code (uit Vercel)": "Setup code (from Vercel)",
-  "Ik begrijp dat de beheerder (mijn coach) mijn journal kan bekijken, alleen lezen, en dat elk bezoek wordt vastgelegd. Ik kan dit zelf terugzien en mijn account op elk moment verwijderen.": "I understand that the admin (my coach) can view my journal, read only, and that every visit is logged. I can see this myself and delete my account at any time.",
   "Beheerder aanmaken": "Create admin",
   "Account maken": "Create account",
   "Inloggen": "Log in",
@@ -475,5 +474,18 @@ export const EN = {
   "Bestaat er een account met dit e-mailadres, dan hebben we een link gestuurd om een nieuw wachtwoord te kiezen. De link is 1 uur geldig. Kijk ook in je spam.": "If an account exists for this email address, we have sent a link to choose a new password. The link is valid for 1 hour. Check your spam folder too.",
   "Je wachtwoord is gewijzigd. Je kunt nu inloggen met je nieuwe wachtwoord.": "Your password has been changed. You can now log in with your new password.",
   "Nieuw wachtwoord (minimaal 10 tekens)": "New password (at least 10 characters)",
-  "Herhaal nieuw wachtwoord": "Repeat new password"
+  "Herhaal nieuw wachtwoord": "Repeat new password",
+  "Deze klant is gedeactiveerd. Activeer de klant eerst.": "This client is deactivated. Activate the client first.",
+  "Resetlink": "Reset link",
+  "Resetlink voor {name}": "Reset link for {name}",
+  "Stuur deze link zelf naar de klant (bijvoorbeeld via WhatsApp). Met de link kiest de klant een nieuw wachtwoord. Hij werkt één keer en is 24 uur geldig; een eerdere link van deze klant vervalt.": "Send this link to the client yourself (for example via WhatsApp). With the link the client chooses a new password. It works once and is valid for 24 hours; any earlier link for this client expires.",
+  "Gekopieerd": "Copied",
+  "Link kopiëren": "Copy link",
+  "Hoi {name}, hier is je link om een nieuw wachtwoord te kiezen voor DCRAMERE Journal (24 uur geldig, één keer te gebruiken): {link}": "Hi {name}, here is your link to choose a new password for DCRAMERE Journal (valid for 24 hours, single use): {link}",
+  "Deel via WhatsApp": "Share via WhatsApp",
+  "Dit wordt vastgelegd en is zichtbaar voor de klant. Na het gebruik van de link wordt de klant overal uitgelogd.": "This is logged and visible to the client. Once the link is used, the client is logged out everywhere.",
+  "{name} (beheerder) maakte een resetlink voor je wachtwoord aan": "{name} (admin) created a reset link for your password",
+  "De beheerder kan je journal alleen lezen, niet aanpassen. Vergeet je je wachtwoord, dan kan de beheerder een resetlink voor je maken; dat wordt hier ook getoond.": "The admin can only read your journal, not change it. If you forget your password, the admin can create a reset link for you; that is shown here too.",
+  "Ik begrijp dat de beheerder (mijn coach) mijn journal kan bekijken, alleen lezen, dat de beheerder bij een vergeten wachtwoord een resetlink voor me kan maken, en dat elk bezoek of elke link wordt vastgelegd. Ik kan dit zelf terugzien en mijn account op elk moment verwijderen.": "I understand that the admin (my coach) can view my journal, read only, that the admin can create a reset link for me if I forget my password, and that every visit or link is logged. I can see this myself and delete my account at any time.",
+  "Wachtwoord kwijt? Vraag je coach om een resetlink.": "Lost your password? Ask your coach for a reset link."
 };

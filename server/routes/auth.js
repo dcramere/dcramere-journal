@@ -8,6 +8,7 @@ import {
   dummyVerify,
   hashPassword,
   ipKey,
+  issueResetToken,
   publicUser,
   rateLimit,
   safeEqual,
@@ -17,7 +18,6 @@ import {
 import { appUrl, isMailConfigured, passwordChangedEmail, resetEmail, sendMail } from "../mailer.js";
 import { upsertSettings } from "../data-ops.js";
 import { forgotSchema, loginSchema, registerSchema, resetSchema } from "../validators.js";
-import { randomBytes } from "node:crypto";
 
 const MIN15 = 15 * 60 * 1000;
 
@@ -119,15 +119,7 @@ export async function forgot({ req, body }) {
     defer(async () => {
       const base = appUrl();
       if (!base) throw new Error("APP_URL ontbreekt: kan geen resetlink maken");
-      const token = randomBytes(32).toString("base64url");
-      const now = Date.now();
-      await query(`UPDATE password_resets SET used_at = $2 WHERE user_id = $1::uuid AND used_at IS NULL`, [user.id, now]);
-      await query(`INSERT INTO password_resets (user_id, token_hash, created_at, expires_at) VALUES ($1::uuid, $2, $3, $4)`, [
-        user.id,
-        sha256(token),
-        now,
-        now + RESET_TTL,
-      ]);
+      const { token } = await issueResetToken(user.id, RESET_TTL);
       await sendMail({ to: email, ...resetEmail({ lang: user.lang, name: user.name, link: `${base}/#/reset?token=${token}` }) });
     });
   }

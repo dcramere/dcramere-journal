@@ -46,6 +46,7 @@ add("GET", "/api/admin/users", "admin", adminRoutes.listUsers);
 add("GET", "/api/admin/users/:id/data", "admin", adminRoutes.getUserData);
 add("GET", "/api/admin/users/:id/screenshots/:tradeId", "admin", adminRoutes.getUserScreenshot);
 add("PATCH", "/api/admin/users/:id", "admin", adminRoutes.setUserStatus);
+add("POST", "/api/admin/users/:id/reset-link", "admin", adminRoutes.createResetLink);
 
 function match(method, path) {
   for (const r of routes) {

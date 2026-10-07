@@ -90,7 +90,7 @@ full journal, **read only**. Without a database the app keeps running in local m
    scherm gesloten: er kan nooit een tweede beheerder via de setup-code bij. / Open `/#/setup` and create the admin; it closes
    itself once an admin exists.
 
-5. **E-mail voor "wachtwoord vergeten" (optioneel maar aan te raden) / Email for "forgot password"** — maak een account op
+5. **E-mail voor "wachtwoord vergeten" (optioneel; heb je geen domein, sla dit over en gebruik de resetlink van de beheerder) / Email for "forgot password" (optional; without a domain skip this and use the admin reset link)** — maak een account op
    [resend.com](https://resend.com), verifieer je domein (DNS-records) en maak een API-key. Voeg daarna in Vercel toe: /
    Create a Resend account, verify your domain and create an API key. Then add in Vercel:
 
@@ -114,6 +114,15 @@ overal uitgelogd, een eventuele inlogblokkade wordt opgeheven en er gaat een "wa
 per e-mailadres. / The client requests a link; the app always answers the same (even for unknown addresses) and emails a 1-hour, single-use
 link if the account exists. Only a hash is stored; the token lives in the URL fragment so it never reaches server logs. After resetting, all
 sessions are revoked, any login lockout is lifted and a "password changed" notice is sent. Max 3 requests per hour per address.
+
+**Zonder e-mail: resetlink van de beheerder / Without email: admin reset link** — in `#/admin` staat bij elke klant een knop *Resetlink*.
+Die maakt een eenmalige link (24 uur geldig) die jij zelf doorstuurt, bijvoorbeeld via WhatsApp. Met de link kiest de klant een nieuw
+wachtwoord en wordt overal uitgelogd. Zolang e-mail niet is ingesteld, ziet de klant op het inlogscherm "Vraag je coach om een resetlink".
+Dit is de enige plek waar de beheerder meer kan dan lezen (met zo'n link kun je een account in principe overnemen); daarom wordt elke
+link vastgelegd, is hij zichtbaar voor de klant onder *Privacy en account*, en stemt de klant bij het registreren hier expliciet mee in. /
+In `#/admin` every client has a *Reset link* button that creates a single-use, 24-hour link you send yourself (e.g. via WhatsApp). It is the one
+place where the admin can do more than read (such a link can in principle take over an account), so every link is logged, visible to the
+client under *Privacy and account*, and the client consents to it at sign-up.
 
 ### Hoe het werkt / How it works
 

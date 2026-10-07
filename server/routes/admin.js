@@ -1,6 +1,6 @@
 import { query } from "../db.js";
 import { ApiError } from "../http.js";
-import { publicUser } from "../auth.js";
+import { issueResetToken, publicUser } from "../auth.js";
 import { loadJournal } from "../mappers.js";
 import { statusSchema } from "../validators.js";
 
@@ -73,6 +73,23 @@ export async function getUserScreenshot({ params }) {
   const [row] = await query(`SELECT data FROM screenshots WHERE user_id = $1::uuid AND trade_id = $2`, [id, params.tradeId]);
   if (!row) throw new ApiError(404, "not_found");
   return { data: row.data };
+}
+
+// De beheerder maakt een resetlink voor een klant (zonder e-mail). Altijd vastgelegd en zichtbaar voor de klant.
+export async function createResetLink({ user, params }) {
+  const id = targetId(params);
+  if (id === user.id) throw new ApiError(400, "cannot_change_self");
+  const [target] = await query(`SELECT role, status FROM users WHERE id = $1::uuid`, [id]);
+  if (!target) throw new ApiError(404, "not_found");
+  if (target.role === "admin") throw new ApiError(403, "forbidden");
+  if (target.status !== "active") throw new ApiError(409, "user_disabled");
+  const { token, expiresAt } = await issueResetToken(id, 24 * 60 * 60 * 1000);
+  await query(`INSERT INTO audit_log (actor_id, target_user_id, action, created_at) VALUES ($1::uuid, $2::uuid, 'reset_link', $3::bigint)`, [
+    user.id,
+    id,
+    Date.now(),
+  ]);
+  return { token, expiresAt };
 }
 
 export async function setUserStatus({ user, params, body }) {

@@ -1,13 +1,16 @@
 // E-mail versturen via Resend (https://resend.com). Eén functie, dus makkelijk te vervangen.
-// Omgevingsvariabelen: RESEND_API_KEY, MAIL_FROM ("DCRAMERE Journal <journal@jouwdomein.nl>"), APP_URL.
+// Omgevingsvariabelen: RESEND_API_KEY, MAIL_FROM of RESEND_FROM_EMAIL ("DCRAMERE Journal <journal@jouwdomein.nl>"), APP_URL.
 let override = null;
 
 export function setMailer(fn) {
   override = fn;
 }
 
+// MAIL_FROM of RESEND_FROM_EMAIL (zelfde naam als in het loan-platform).
+const fromAddress = () => process.env.MAIL_FROM || process.env.RESEND_FROM_EMAIL || "";
+
 export function isMailConfigured() {
-  return Boolean(override || (process.env.RESEND_API_KEY && process.env.MAIL_FROM));
+  return Boolean(override || (process.env.RESEND_API_KEY && fromAddress()));
 }
 
 // Basis-URL van de site, voor de link in de e-mail. Nooit uit de Host-header afleiden.
@@ -23,7 +26,7 @@ export async function sendMail({ to, subject, text, html }) {
   const res = await fetch("https://api.resend.com/emails", {
     method: "POST",
     headers: { Authorization: `Bearer ${process.env.RESEND_API_KEY}`, "Content-Type": "application/json" },
-    body: JSON.stringify({ from: process.env.MAIL_FROM, to: [to], subject, text, html }),
+    body: JSON.stringify({ from: fromAddress(), to: [to], subject, text, html }),
   });
   if (!res.ok) throw new Error(`mail provider answered ${res.status}`);
   return undefined;

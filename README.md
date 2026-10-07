@@ -97,7 +97,7 @@ full journal, **read only**. Without a database the app keeps running in local m
    | Variabele / Variable | Waarde / Value |
    |---|---|
    | `RESEND_API_KEY` | de API-key uit Resend / the API key from Resend |
-   | `MAIL_FROM` | `DCRAMERE Journal <journal@jouwdomein.nl>` (een adres op je geverifieerde domein / an address on your verified domain) |
+   | `MAIL_FROM` (of / or `RESEND_FROM_EMAIL`) | `DCRAMERE Journal <journal@jouwdomein.nl>` (een adres op je geverifieerde domein / an address on your verified domain) |
    | `APP_URL` | `https://dcramere-journal.vercel.app` (of je eigen domein / or your own domain) |
 
    Zolang deze variabelen ontbreken, ziet de klant de link "Wachtwoord vergeten?" niet. Het afzenderadres
@@ -105,7 +105,7 @@ full journal, **read only**. Without a database the app keeps running in local m
    is geverifieerd. / Until these are set, the "Forgot your password?" link is hidden. Resend's `onboarding@resend.dev` sender only
    delivers to your own Resend address, which is handy for trying the flow before your domain is verified.
 
-Zet de setup-code en de API-key **nooit** in de chat of in de code; alleen in Vercel. / Never put the setup code or the API key in chat or in code.
+Zet de setup-code en de API-key **nooit** in de chat, in een screenshot of in de code; alleen in Vercel. Geef de key bij voorkeur alleen *Sending access* (niet *Full access*). / Never put the setup code or the API key in chat, screenshots or code; only in Vercel. Prefer *Sending access* over *Full access* for the key.
 
 **Hoe wachtwoord vergeten werkt / How forgot-password works:** de klant vraagt een link aan; de app antwoordt altijd hetzelfde (ook bij een
 onbekend adres) en mailt, als het account bestaat, een link die 1 uur geldig is en één keer werkt. Het token staat alleen als hash in de

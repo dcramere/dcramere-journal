@@ -569,5 +569,8 @@ export const EN = {
   "de week": "the week",
   "de maand": "the month",
   "Je sloot {period} op break-even af.": "You closed {period} at break-even.",
-  "Dat is {delta} slechter dan {prev}.": "That is {delta} worse than {prev}."
+  "Dat is {delta} slechter dan {prev}.": "That is {delta} worse than {prev}.",
+  "Nog geen account? Maak er eerst een aan.": "No account yet? Create one first.",
+  "Wel een account maar het wachtwoord kwijt? Kies hieronder ‘Wachtwoord vergeten?’.": "Have an account but lost the password? Choose ‘Forgot your password?’ below.",
+  "Wel een account maar het wachtwoord kwijt? Vraag je coach om een resetlink.": "Have an account but lost the password? Ask your coach for a reset link."
 };

@@ -26,6 +26,7 @@ export function AuthScreen({ lang, onLang, onAuthed, setup = false, needsSetup =
   const [mode, setMode] = useState("login"); // login | register | forgot
   const [f, setF] = useState({ name: "", email: "", password: "", repeat: "", token: "", consent: false });
   const [error, setError] = useState("");
+  const [errorCode, setErrorCode] = useState("");
   const [notice, setNotice] = useState("");
   const [done, setDone] = useState(false);
   const [busy, setBusy] = useState(false);
@@ -38,6 +39,7 @@ export function AuthScreen({ lang, onLang, onAuthed, setup = false, needsSetup =
   const switchMode = (next) => {
     setMode(next);
     setError("");
+    setErrorCode("");
     setNotice("");
     setDone(false);
   };
@@ -45,6 +47,7 @@ export function AuthScreen({ lang, onLang, onAuthed, setup = false, needsSetup =
   async function submit(e) {
     e.preventDefault();
     setError("");
+    setErrorCode("");
     if (view === "reset" && f.password !== f.repeat) return setError(tr("De twee wachtwoorden zijn niet gelijk."));
     setBusy(true);
     try {
@@ -63,6 +66,7 @@ export function AuthScreen({ lang, onLang, onAuthed, setup = false, needsSetup =
       }
     } catch (err) {
       setError(err.message);
+      setErrorCode(err.code || "");
     } finally {
       setBusy(false);
     }
@@ -182,6 +186,15 @@ export function AuthScreen({ lang, onLang, onAuthed, setup = false, needsSetup =
                 <p role="alert" className="text-xs" style={{ color: COLORS.red }}>
                   {error}
                 </p>
+              )}
+              {view === "login" && errorCode === "invalid_credentials" && (
+                <div className="text-[11px] leading-relaxed rounded-lg px-3 py-2" style={{ background: COLORS.inputBg, color: COLORS.textMuted, border: `1px solid ${COLORS.cardBorder}` }}>
+                  <p>{tr("Nog geen account? Maak er eerst een aan.")}</p>
+                  <button type="button" onClick={() => switchMode("register")} className="font-semibold mt-1" style={{ color: COLORS.gold }}>
+                    {tr("Account maken")} →
+                  </button>
+                  <p className="mt-1">{mail ? tr("Wel een account maar het wachtwoord kwijt? Kies hieronder ‘Wachtwoord vergeten?’.") : tr("Wel een account maar het wachtwoord kwijt? Vraag je coach om een resetlink.")}</p>
+                </div>
               )}
               {notice && (
                 <p role="status" className="text-xs" style={{ color: COLORS.green }}>

@@ -1,0 +1,209 @@
+// End-to-end test van de API tegen een in-memory Postgres (PGlite).  npm run test:api
+import { createDevServer } from "./dev-api.mjs";
+
+process.env.ADMIN_SETUP_TOKEN = "test-setup-token";
+const server = await createDevServer({ memory: true });
+await new Promise((r) => server.listen(0, r));
+const base = `http://localhost:${server.address().port}`;
+
+let fails = 0;
+const ok = (name, cond, extra = "") => {
+  if (!cond) fails += 1;
+  console.log(`${cond ? "ok  " : "FAIL"} ${name}${!cond && extra ? "  -> " + extra : ""}`);
+};
+
+let ipCounter = 1;
+class Client {
+  constructor() {
+    this.cookie = "";
+    this.ip = `10.0.0.${ipCounter++}`;
+  }
+  async req(method, path, body, headers = {}) {
+    const res = await fetch(base + path, {
+      method,
+      headers: { "Content-Type": "application/json", "X-DJ-CSRF": "1", "X-Forwarded-For": this.ip, ...(this.cookie ? { Cookie: this.cookie } : {}), ...headers },
+      body: body === undefined ? undefined : JSON.stringify(body),
+    });
+    const set = res.headers.get("set-cookie");
+    if (set) this.cookie = set.split(";")[0].endsWith("=") ? "" : set.split(";")[0];
+    let json = null;
+    try {
+      json = await res.json();
+    } catch {}
+    return { status: res.status, json, set };
+  }
+}
+
+const account = (id, over = {}) => ({ id, name: "Prop", broker: "Tradovate", type: "PROP", startBalance: 25000, riskMode: "FIXED", riskUnit: "$", riskValue: 100, commission: 1, adjustments: [], ...over });
+const trade = (id, accountId, pnl, over = {}) => ({ id, accountId, symbol: "MNQ", direction: "Long", qty: 2, entryPrice: 100, exitPrice: 101, openedAt: Date.now() - 60000, closedAt: Date.now(), pnl, fees: 2, r: null, setup: "Snelweg (200)", mood: "Rustig", lesson: "", hasScreenshot: false, source: "manual", ...over });
+
+// --- health & setup
+const anon = new Client();
+let r = await anon.req("GET", "/api/health");
+ok("health configured+ready, needs setup", r.json.configured && r.json.ready && r.json.needsSetup === true, JSON.stringify(r.json));
+
+// --- csrf
+r = await fetch(base + "/api/auth/login", { method: "POST", headers: { "Content-Type": "application/json" }, body: "{}" });
+ok("POST without CSRF header is rejected", r.status === 403);
+r = await anon.req("POST", "/api/auth/login", { email: "x@y.nl", password: "x" }, { Origin: "https://evil.example" });
+ok("cross-origin POST rejected", r.status === 403);
+
+// --- admin bootstrap
+const admin = new Client();
+r = await admin.req("POST", "/api/auth/register", { email: "dino@example.com", password: "correct horse battery", name: "Dino", setupToken: "wrong" });
+ok("wrong setup token rejected", r.status === 403 && r.json.error.code === "bad_setup_token");
+r = await admin.req("POST", "/api/auth/register", { email: "dino@example.com", password: "correct horse battery", name: "Dino", setupToken: "test-setup-token" });
+ok("admin registers with setup token", r.status === 201 && r.json.user.role === "admin", JSON.stringify(r.json));
+ok("session cookie is HttpOnly + SameSite", /HttpOnly/.test(r.set) && /SameSite=Lax/.test(r.set));
+r = await new Client().req("POST", "/api/auth/register", { email: "evil@example.com", password: "correct horse battery", name: "Evil", setupToken: "test-setup-token" });
+ok("setup closes once an admin exists", r.status === 403 && r.json.error.code === "setup_closed");
+r = await anon.req("GET", "/api/health");
+ok("health no longer needs setup", r.json.needsSetup === false);
+
+// --- client registration
+const alice = new Client();
+r = await alice.req("POST", "/api/auth/register", { email: "alice@example.com", password: "short", name: "Alice", consent: true });
+ok("short password rejected", r.status === 400 && r.json.error.code === "invalid_input");
+r = await alice.req("POST", "/api/auth/register", { email: "alice@example.com", password: "alice-long-password", name: "Alice" });
+ok("consent required", r.status === 400 && r.json.error.code === "consent_required");
+r = await alice.req("POST", "/api/auth/register", { email: "Alice@Example.com", password: "alice-long-password", name: "Alice", consent: true, lang: "en" });
+ok("client registers (email normalised)", r.status === 201 && r.json.user.email === "alice@example.com" && r.json.user.role === "client");
+r = await new Client().req("POST", "/api/auth/register", { email: "alice@example.com", password: "another-long-password", name: "Dup", consent: true });
+ok("duplicate email rejected", r.status === 409 && r.json.error.code === "email_taken");
+
+const bob = new Client();
+r = await bob.req("POST", "/api/auth/register", { email: "bob@example.com", password: "bob-long-password!", name: "Bob", consent: true });
+ok("second client registers", r.status === 201);
+
+// --- auth
+r = await new Client().req("GET", "/api/data");
+ok("data requires login", r.status === 401);
+r = await new Client().req("POST", "/api/auth/login", { email: "alice@example.com", password: "wrong-password-x" });
+ok("wrong password -> 401 generic", r.status === 401 && r.json.error.code === "invalid_credentials");
+r = await new Client().req("POST", "/api/auth/login", { email: "nobody@example.com", password: "wrong-password-x" });
+ok("unknown email -> same 401", r.status === 401 && r.json.error.code === "invalid_credentials");
+const alice2 = new Client();
+r = await alice2.req("POST", "/api/auth/login", { email: "alice@example.com", password: "alice-long-password" });
+ok("login works", r.status === 200 && r.json.user.name === "Alice");
+r = await alice2.req("GET", "/api/auth/me");
+ok("me returns the user", r.status === 200 && r.json.user.email === "alice@example.com");
+
+// --- data isolation
+r = await alice.req("PUT", "/api/accounts/acc-a", account("acc-a"));
+ok("alice saves account", r.status === 200, JSON.stringify(r.json));
+r = await alice.req("POST", "/api/trades/bulk", { trades: [trade("t1", "acc-a", 50), trade("t2", "acc-a", -30, { mood: "Wraakzuchtig" }), trade("t3", "acc-a", 80)] });
+ok("alice bulk-saves 3 trades", r.status === 200 && r.json.count === 3, JSON.stringify(r.json));
+r = await alice.req("POST", "/api/trades/bulk", { trades: [trade("t1", "acc-a", 55)] });
+ok("bulk upsert is idempotent", r.status === 200);
+r = await alice.req("PUT", "/api/trades/tx", trade("tx", "no-such-account", 1));
+ok("trade on unknown account rejected", r.status === 400 && r.json.error.code === "unknown_account", JSON.stringify(r.json));
+r = await alice.req("PUT", "/api/trades/ty", { ...trade("ty", "acc-a", 1), qty: -3 });
+ok("invalid trade rejected by schema", r.status === 400 && r.json.error.code === "invalid_input");
+r = await alice.req("GET", "/api/data");
+ok("alice sees 1 account + 3 trades, t1 updated", r.json.accounts.length === 1 && r.json.trades.length === 3 && r.json.trades.find((t) => t.id === "t1").pnl === 55);
+ok("numbers come back as numbers", typeof r.json.trades[0].openedAt === "number" && typeof r.json.accounts[0].startBalance === "number");
+
+r = await bob.req("GET", "/api/data");
+ok("bob sees none of alice's data", r.json.accounts.length === 0 && r.json.trades.length === 0);
+r = await bob.req("PUT", "/api/accounts/acc-a", account("acc-a", { name: "Bob's own" }));
+ok("same account id for another user is separate", r.status === 200);
+r = await bob.req("DELETE", "/api/trades/t1");
+r = await alice.req("GET", "/api/data");
+ok("bob cannot delete alice's trade", r.json.trades.some((t) => t.id === "t1") && r.json.accounts[0].name === "Prop");
+r = await bob.req("GET", "/api/screenshots/t1");
+ok("bob cannot read alice's screenshot", r.status === 404);
+
+// --- screenshots
+const png = "data:image/jpeg;base64,/9j/4AAQSkZJRgABAQ==";
+r = await alice.req("PUT", "/api/screenshots/t1", { data: png });
+ok("screenshot saved", r.status === 200);
+r = await alice.req("PUT", "/api/screenshots/t1", { data: "data:text/html;base64,PHNjcmlwdD4=" });
+ok("non-image screenshot rejected", r.status === 400);
+r = await alice.req("GET", "/api/screenshots/t1");
+ok("screenshot readable", r.json.data === png);
+r = await alice.req("GET", "/api/data");
+ok("hasScreenshot flag set", r.json.trades.find((t) => t.id === "t1").hasScreenshot === true);
+
+// --- settings
+r = await alice.req("PUT", "/api/settings", { unit: "R", lang: "en", timezone: "America/New_York", imports: [{ id: "i", filename: "a.csv" }] });
+ok("settings saved", r.status === 200);
+r = await alice.req("GET", "/api/data");
+ok("settings round-trip", r.json.settings.unit === "R" && r.json.settings.imports.length === 1);
+
+// --- authorisation of admin routes
+r = await alice.req("GET", "/api/admin/users");
+ok("client cannot list users", r.status === 403);
+r = await new Client().req("GET", "/api/admin/users");
+ok("anonymous cannot list users", r.status === 401);
+
+// --- admin view
+r = await admin.req("GET", "/api/admin/users");
+const users = r.json.users;
+const aliceRow = users.find((u) => u.email === "alice@example.com");
+ok("admin lists all 3 users", r.status === 200 && users.length === 3);
+ok("admin sees alice's aggregates", aliceRow.trades === 3 && Math.abs(aliceRow.net - 105) < 1e-9 && aliceRow.wins === 2 && aliceRow.losses === 1 && aliceRow.accounts === 1, JSON.stringify(aliceRow));
+ok("admin sees last trade date", typeof aliceRow.lastTradeAt === "number");
+r = await admin.req("GET", `/api/admin/users/${aliceRow.id}/data`);
+ok("admin reads alice's journal", r.status === 200 && r.json.trades.length === 3 && r.json.user.name === "Alice");
+r = await admin.req("GET", `/api/admin/users/${aliceRow.id}/screenshots/t1`);
+ok("admin reads alice's screenshot", r.json.data === png);
+r = await admin.req("GET", "/api/admin/users/not-a-uuid/data");
+ok("bad id -> 404", r.status === 404);
+r = await admin.req("GET", `/api/admin/users/${aliceRow.id}/data`);
+r = await alice.req("GET", "/api/me/access-log");
+ok("alice sees the access log (deduped to 1)", r.json.entries.length === 1 && r.json.entries[0].actor === "Dino" && r.json.entries[0].action === "view_journal", JSON.stringify(r.json));
+r = await bob.req("GET", "/api/me/access-log");
+ok("bob's access log is empty", r.json.entries.length === 0);
+r = await admin.req("PUT", `/api/trades/t1`, trade("t1", "acc-a", 1));
+r = await alice.req("GET", "/api/data");
+ok("admin's write only touches admin's own data", r.json.trades.find((t) => t.id === "t1").pnl === 55);
+
+// --- disable user
+r = await admin.req("PATCH", `/api/admin/users/${aliceRow.id}`, { status: "disabled" });
+ok("admin disables alice", r.status === 200);
+r = await alice.req("GET", "/api/data");
+ok("disabled user's session stops working", r.status === 401);
+r = await new Client().req("POST", "/api/auth/login", { email: "alice@example.com", password: "alice-long-password" });
+ok("disabled user cannot log in", r.status === 403 && r.json.error.code === "account_disabled");
+const adminRow = users.find((u) => u.role === "admin");
+r = await admin.req("PATCH", `/api/admin/users/${adminRow.id}`, { status: "disabled" });
+ok("admin cannot disable self", r.status === 400);
+r = await admin.req("PATCH", `/api/admin/users/${aliceRow.id}`, { status: "active" });
+ok("admin re-enables alice", r.status === 200);
+
+// --- export / delete
+const alice3 = new Client();
+await alice3.req("POST", "/api/auth/login", { email: "alice@example.com", password: "alice-long-password" });
+r = await alice3.req("GET", "/api/me/export");
+ok("export contains trades + screenshots", r.json.trades.length === 3 && r.json.screenshots.t1 === png && r.json.app === "dcramere-journal");
+r = await alice3.req("POST", "/api/import", { accounts: [account("acc-b", { name: "Imported" })], trades: [trade("i1", "acc-b", 10)] });
+ok("import adds accounts then trades", r.status === 200 && r.json.trades === 1);
+r = await alice3.req("DELETE", "/api/me/data");
+r = await alice3.req("GET", "/api/data");
+ok("delete-my-data wipes accounts, trades, screenshots", r.json.accounts.length === 0 && r.json.trades.length === 0);
+r = await admin.req("DELETE", "/api/me");
+ok("last admin cannot delete themselves", r.status === 409 && r.json.error.code === "last_admin");
+r = await bob.req("DELETE", "/api/me");
+ok("client deletes own account", r.status === 200);
+r = await bob.req("GET", "/api/data");
+ok("deleted account's session is gone", r.status === 401);
+r = await admin.req("GET", "/api/admin/users");
+ok("deleted user vanishes from admin list", r.json.users.length === 2);
+
+// --- rate limiting
+const spam = new Client();
+let last;
+for (let i = 0; i < 10; i += 1) last = await spam.req("POST", "/api/auth/login", { email: "spam@example.com", password: "wrong-password-x" });
+ok("login is rate limited per email", last.status === 429, String(last.status));
+const regs = new Client();
+for (let i = 0; i < 6; i += 1) last = await regs.req("POST", "/api/auth/register", { email: `u${i}@example.com`, password: "long-enough-password", name: `U${i}`, consent: true });
+ok("registration is rate limited per IP", last.status === 429, String(last.status));
+
+// --- logout
+r = await admin.req("POST", "/api/auth/logout");
+r = await admin.req("GET", "/api/auth/me");
+ok("logout invalidates the session", r.status === 401);
+
+console.log(fails ? `\n${fails} FAILED` : "\nALL PASSED");
+server.close();
+process.exit(fails ? 1 : 0);

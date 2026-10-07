@@ -66,7 +66,7 @@ export function PnlCalendar({ stats, unit, cursor, setCursor, onPickDay }) {
     <Card>
       <div className="flex flex-wrap items-center justify-between gap-2 mb-3">
         <div className="flex items-center gap-2">
-          <button type="button" onClick={() => shift(-1)} aria-label={tr("Vorige maand")} style={{ color: COLORS.textMuted }}>
+          <button type="button" onClick={() => shift(-1)} aria-label={tr("Naar vorige maand")} style={{ color: COLORS.textMuted }}>
             <ChevronLeft size={18} />
           </button>
           <h3 className="text-base font-semibold first-letter:uppercase" style={{ color: COLORS.text }}>

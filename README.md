@@ -54,6 +54,69 @@ phone are not on your laptop, and clearing browser data wipes the journal. Downl
 - Tijdzone (standaard America/New_York) bepaalt op welke dag, uur en weekdag een trade valt / The time zone (default
   America/New_York) decides which day, hour and weekday a trade falls on.
 
+## Klanten, accounts en beheerder / Clients, accounts and admin
+
+**NL** — Met een database (Neon Postgres) krijgt elke klant een eigen account met e-mail en wachtwoord. Jij, als beheerder,
+ziet alle klanten op `#/admin`: laatst ingelogd, laatste trade, aantal trades, win % en resultaat (30 dagen en totaal). Klik op
+*Open* om het volledige journal van een klant te bekijken, **alleen lezen**. Zonder database blijft de app gewoon in de lokale
+modus werken (alles in de browser, zonder inlog), zoals voorheen.
+
+**EN** — With a database (Neon Postgres) every client gets their own account with email and password. You, as admin, see all
+clients at `#/admin`: last login, last trade, trade count, win % and result (30 days and total). Click *Open* to view a client's
+full journal, **read only**. Without a database the app keeps running in local mode (everything in the browser, no login) as before.
+
+**Privacy / Privacy**
+
+- Klanten geven bij het aanmaken van hun account expliciet akkoord dat de beheerder meekijkt. / Clients explicitly consent when signing up.
+- Elk bezoek van de beheerder aan een klantjournal wordt vastgelegd (max. 1 regel per 10 min per klant) en is voor de klant zichtbaar
+  onder *Import → Privacy en account*. / Every admin visit is logged and visible to the client.
+- Klanten kunnen hun account en alle data zelf verwijderen. / Clients can delete their account and all data themselves.
+- De beheerder kan klanten deactiveren (direct uitgelogd) maar niets in hun journal wijzigen. / The admin can deactivate clients but cannot edit their journals.
+
+### Eenmalig instellen / One-time setup
+
+1. **Database** — Vercel → je project → *Storage* → *Create Database* → **Neon (Postgres)** en koppel die aan het project. Vercel zet dan zelf
+   `DATABASE_URL`. / Add a Neon Postgres database to the project; Vercel sets `DATABASE_URL` for you.
+2. **Setup-code** — Vercel → *Settings → Environment Variables* → voeg `ADMIN_SETUP_TOKEN` toe met een lange willekeurige waarde
+   (Production én Preview). Genereer er een met: / Add `ADMIN_SETUP_TOKEN` with a long random value:
+
+   ```bash
+   openssl rand -base64 32
+   ```
+
+3. **Opnieuw deployen** — de build draait automatisch de databasemigraties (`vercel-build` → `scripts/migrate.mjs`). / Redeploy; the
+   build runs the migrations automatically.
+4. **Beheerder aanmaken** — open `https://<jouw-site>/#/setup`, vul naam, e-mail, wachtwoord en de setup-code in. Daarna is dit
+   scherm gesloten: er kan nooit een tweede beheerder via de setup-code bij. / Open `/#/setup` and create the admin; it closes
+   itself once an admin exists.
+
+Zet de setup-code **nooit** in de chat of in de code; alleen in Vercel. / Never put the setup code in chat or in code.
+
+### Hoe het werkt / How it works
+
+- `api/[...path].js` is één Vercel-functie met een eigen router (`server/`). Wachtwoorden: scrypt. Sessies: willekeurig token in een
+  HttpOnly-cookie (alleen de hash staat in de database), 30 dagen, direct intrekbaar. / One Vercel function, scrypt passwords,
+  opaque session tokens in HttpOnly cookies.
+- Schrijvende verzoeken vereisen een eigen header plus een kloppende `Origin` (CSRF-bescherming). Inloggen en registreren hebben
+  limieten per IP en per e-mailadres. / CSRF header + origin check; rate limits on login and signup.
+- Elke klant ziet alleen zijn eigen rijen (alle queries filteren op `user_id`; ids zijn per gebruiker uniek).
+- Bestaand lokaal journal in de browser? Na het inloggen biedt de app aan om het in je account te importeren. / Existing local
+  journal? After logging in the app offers to import it into your account.
+- **Nog niet aanwezig / Not included yet:** wachtwoord vergeten en e-mailverificatie (daar is een e-mailprovider voor nodig, bijv. Resend).
+  Vrij registreren betekent dat iedereen met een link een account kan maken; de beheerder kan accounts deactiveren. / Password reset and
+  email verification (needs an email provider). Open sign-up means anyone with the link can register; the admin can deactivate accounts.
+
+### Lokaal ontwikkelen / Local development
+
+```bash
+npm install
+npm run dev        # Vite (5173) + lokale API (8787) op een ingebouwde Postgres (PGlite)
+npm test           # rekenlogica, API-tests en vertaalcontrole
+```
+
+De lokale API gebruikt setup-code `dev-setup-token` en bewaart data in `.dev-db/` (niet in git). / The local API uses setup code
+`dev-setup-token` and stores data in `.dev-db/` (git-ignored).
+
 ## Lokaal draaien
 
 ```bash

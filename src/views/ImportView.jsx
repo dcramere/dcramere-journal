@@ -324,7 +324,7 @@ function NewAccount({ onAdd }) {
   );
 }
 
-export function ImportView({ journal, accountBalances, tradeCounts }) {
+export function ImportView({ journal, accountBalances, tradeCounts, footer = null }) {
   const { accounts, settings, updateSettings, addAccount, updateAccount, deleteAccount, importTrades, exportBackup, restoreBackup, resetAll } = journal;
   const [backupMsg, setBackupMsg] = useState(null);
   const restoreRef = useRef(null);
@@ -438,6 +438,8 @@ export function ImportView({ journal, accountBalances, tradeCounts }) {
           </Button>
         </Collapse>
       </Card>
+
+      {footer}
     </div>
   );
 }

@@ -1,7 +1,7 @@
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import { Camera, X } from "lucide-react";
 import { COLORS, MOODS, SETUPS } from "../theme.js";
-import { storage } from "../storage.js";
+import { deleteShot, getShot, setShot as saveShot } from "../shots.js";
 import { KNOWN_ROOTS, pointValue } from "../lib/contracts.js";
 import { money } from "../lib/format.js";
 import { resizeImageFile } from "../lib/image.js";
@@ -58,7 +58,7 @@ function initialState(initial, accounts, defaultAccountId, tz) {
   };
 }
 
-export function TradeForm({ accounts, defaultAccountId, initial, tz, knownSymbols, onSave, onClose }) {
+export function TradeForm({ accounts, defaultAccountId, initial, tz, knownSymbols, onSave, onDone, onClose }) {
   const [f, setF] = useState(() => initialState(initial, accounts, defaultAccountId, tz));
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
@@ -72,9 +72,8 @@ export function TradeForm({ accounts, defaultAccountId, initial, tz, knownSymbol
 
   useEffect(() => {
     if (!initial?.hasScreenshot) return;
-    storage
-      .get(`screenshot:${initial.id}`, false)
-      .then((r) => setShot(r.value))
+    getShot(initial.id)
+      .then((value) => setShot(value))
       .catch(() => setShot(null));
   }, [initial]);
 
@@ -146,23 +145,9 @@ export function TradeForm({ accounts, defaultAccountId, initial, tz, knownSymbol
     if (closedAt < openedAt) return setError(tr("Sluittijd ligt vóór de opentijd."));
 
     setBusy(true);
-    let hasScreenshot = initial?.hasScreenshot || false;
-    if (shotChanged) {
-      try {
-        if (shot) {
-          await storage.set(`screenshot:${tradeId.current}`, shot, false);
-          hasScreenshot = true;
-        } else {
-          await storage.delete(`screenshot:${tradeId.current}`, false).catch(() => {});
-          hasScreenshot = false;
-        }
-      } catch (err) {
-        setBusy(false);
-        return setError(tr("Screenshot opslaan mislukt (opslag vol?). Probeer zonder screenshot of een kleinere afbeelding."));
-      }
-    }
-
-    onSave({
+    const previousShot = initial?.hasScreenshot || false;
+    const nextShot = shotChanged ? Boolean(shot) : previousShot;
+    const record = {
       ...(initial || {}),
       id: tradeId.current,
       accountId: f.accountId,
@@ -179,9 +164,33 @@ export function TradeForm({ accounts, defaultAccountId, initial, tz, knownSymbol
       setup: f.setup,
       mood: f.mood,
       lesson: f.lesson.trim(),
-      hasScreenshot,
-    });
+      hasScreenshot: nextShot,
+    };
+
+    try {
+      await onSave(record);
+    } catch (err) {
+      setBusy(false);
+      return setError(err.message || tr("Opslaan mislukt."));
+    }
+
+    // De screenshot hoort bij een bestaande trade, dus eerst de trade, dan de afbeelding.
+    if (shotChanged) {
+      try {
+        if (shot) await saveShot(tradeId.current, shot);
+        else await deleteShot(tradeId.current).catch(() => {});
+      } catch (err) {
+        try {
+          await onSave({ ...record, hasScreenshot: previousShot });
+        } catch {
+          // De trade zelf is al opgeslagen.
+        }
+        setBusy(false);
+        return setError(tr("Screenshot opslaan mislukt (opslag vol?). Probeer zonder screenshot of een kleinere afbeelding."));
+      }
+    }
     setBusy(false);
+    onDone();
   }
 
   const symbols = [...new Set([...(knownSymbols || []), ...KNOWN_ROOTS])];
@@ -317,6 +326,7 @@ export function TradeForm({ accounts, defaultAccountId, initial, tz, knownSymbol
           <textarea
             rows={2}
             value={f.lesson}
+            maxLength={2000}
             onChange={(e) => set("lesson", e.target.value)}
             style={inputStyle}
             className="rounded px-2 py-1.5 text-sm"

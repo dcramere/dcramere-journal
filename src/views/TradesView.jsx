@@ -1,22 +1,21 @@
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import { ChevronDown, Download, Pencil, Plus, Trash2, X } from "lucide-react";
 import { COLORS, MONO, MOODS, SETUPS, toneColor } from "../theme.js";
-import { storage } from "../storage.js";
+import { getShot } from "../shots.js";
 import { exportCsv } from "../lib/csv.js";
 import { dayLabel, duration, money, timeLabel, unitValue } from "../lib/format.js";
 import { Button, Card, Empty, Select } from "../ui/primitives.jsx";
 import { tr } from "../i18n.js";
 
-function TradeDetail({ trade, account, unit, onEdit, onDelete }) {
+function TradeDetail({ trade, account, unit, onEdit, onDelete, readOnly }) {
   const [shot, setShot] = useState(null);
   const [shotState, setShotState] = useState(trade.hasScreenshot ? "loading" : "none");
 
   useEffect(() => {
     if (!trade.hasScreenshot) return;
     let live = true;
-    storage
-      .get(`screenshot:${trade.id}`, false)
-      .then((r) => live && (setShot(r.value), setShotState("ok")))
+    getShot(trade.id)
+      .then((value) => live && (setShot(value), setShotState("ok")))
       .catch(() => live && setShotState("error"));
     return () => {
       live = false;
@@ -60,23 +59,25 @@ function TradeDetail({ trade, account, unit, onEdit, onDelete }) {
         </p>
       )}
       {shot && <img src={shot} alt={`Screenshot ${trade.symbol}`} className="rounded max-w-full sm:max-w-lg" style={{ border: `1px solid ${COLORS.cardBorder}` }} />}
-      <div className="flex gap-2">
-        <Button onClick={() => onEdit(trade)}>
-          <span className="inline-flex items-center gap-1">
-            <Pencil size={12} /> {tr("Bewerken")}
-          </span>
-        </Button>
-        <Button variant="danger" onClick={() => onDelete(trade)}>
-          <span className="inline-flex items-center gap-1">
-            <Trash2 size={12} /> {tr("Verwijderen")}
-          </span>
-        </Button>
-      </div>
+      {!readOnly && (
+        <div className="flex gap-2">
+          <Button onClick={() => onEdit(trade)}>
+            <span className="inline-flex items-center gap-1">
+              <Pencil size={12} /> {tr("Bewerken")}
+            </span>
+          </Button>
+          <Button variant="danger" onClick={() => onDelete(trade)}>
+            <span className="inline-flex items-center gap-1">
+              <Trash2 size={12} /> {tr("Verwijderen")}
+            </span>
+          </Button>
+        </div>
+      )}
     </div>
   );
 }
 
-export function TradesView({ ctx, accounts, filters, setFilters, focusId, onEdit, onDelete, onNew, tz, allAccountTrades }) {
+export function TradesView({ ctx, accounts, filters, setFilters, focusId, onEdit, onDelete, onNew, tz, allAccountTrades, readOnly }) {
   const { scoped, unit } = ctx;
   const [open, setOpen] = useState(focusId || null);
   const [showFilters, setShowFilters] = useState(false);
@@ -146,14 +147,16 @@ export function TradesView({ ctx, accounts, filters, setFilters, focusId, onEdit
           </span>
           <ChevronDown size={14} className="ml-auto" style={{ transform: showFilters ? "rotate(180deg)" : "none" }} />
         </button>
-        <button
-          type="button"
-          onClick={onNew}
-          className="flex items-center gap-1 rounded-lg px-3 py-2 text-xs font-bold shrink-0"
-          style={{ background: COLORS.gold, color: "#0A0A0A" }}
-        >
-          <Plus size={14} /> {tr("Trade loggen")}
-        </button>
+        {!readOnly && (
+          <button
+            type="button"
+            onClick={onNew}
+            className="flex items-center gap-1 rounded-lg px-3 py-2 text-xs font-bold shrink-0"
+            style={{ background: COLORS.gold, color: "#0A0A0A" }}
+          >
+            <Plus size={14} /> {tr("Trade loggen")}
+          </button>
+        )}
       </div>
 
       {showFilters && (
@@ -264,7 +267,7 @@ export function TradesView({ ctx, accounts, filters, setFilters, focusId, onEdit
                         {unitValue(v, unit, { sign: true })}
                       </span>
                     </button>
-                    {isOpen && <TradeDetail trade={t} account={accountById.get(t.accountId)} unit={unit} onEdit={onEdit} onDelete={onDelete} />}
+                    {isOpen && <TradeDetail trade={t} account={accountById.get(t.accountId)} unit={unit} onEdit={onEdit} onDelete={onDelete} readOnly={readOnly} />}
                   </div>
                 );
               })}
@@ -273,14 +276,16 @@ export function TradesView({ ctx, accounts, filters, setFilters, focusId, onEdit
         })
       )}
 
-      <div className="flex items-center justify-between gap-2 pt-2 text-xs" style={{ color: COLORS.textMuted }}>
-        <span>{tr("Van jou om te bewaren: alles als spreadsheet (CSV).")}</span>
-        <Button onClick={download} disabled={!allAccountTrades.length}>
-          <span className="inline-flex items-center gap-1">
-            <Download size={12} /> {tr("Download CSV")}
-          </span>
-        </Button>
-      </div>
+      {!readOnly && (
+        <div className="flex items-center justify-between gap-2 pt-2 text-xs" style={{ color: COLORS.textMuted }}>
+          <span>{tr("Van jou om te bewaren: alles als spreadsheet (CSV).")}</span>
+          <Button onClick={download} disabled={!allAccountTrades.length}>
+            <span className="inline-flex items-center gap-1">
+              <Download size={12} /> {tr("Download CSV")}
+            </span>
+          </Button>
+        </div>
+      )}
     </div>
   );
 }

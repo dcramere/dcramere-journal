@@ -97,3 +97,14 @@ export const monthLong = (i) => utc({ month: "long" }, new Date(Date.UTC(2023, i
 // i = 0..6, zondag eerst
 export const weekdayShort = (i) => utc({ weekday: "short" }, new Date(Date.UTC(2023, 0, 1 + i))).replace(".", "").toUpperCase();
 export const weekdayShort2 = (i) => weekdayShort(i).slice(0, 2);
+
+// "vandaag", "gisteren", "3 dagen geleden" — op dagniveau.
+export function relativeDay(ms) {
+  if (ms == null) return "—";
+  const days = Math.round((Date.now() - ms) / 86400000);
+  return new Intl.RelativeTimeFormat(loc(), { numeric: "auto" }).format(-days, "day");
+}
+
+export function dateTimeLabel(ms) {
+  return new Intl.DateTimeFormat(loc(), { dateStyle: "medium", timeStyle: "short" }).format(new Date(ms));
+}

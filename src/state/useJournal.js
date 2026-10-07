@@ -74,11 +74,12 @@ export function useJournal() {
   const addTrade = useCallback((trade) => {
     const full = { id: newId(), source: "manual", fees: 0, ...trade };
     setTrades((list) => [...list, full]);
-    return full;
+    return Promise.resolve(full);
   }, []);
 
   const updateTrade = useCallback((id, patch) => {
     setTrades((list) => list.map((t) => (t.id === id ? { ...t, ...patch } : t)));
+    return Promise.resolve();
   }, []);
 
   const deleteTrade = useCallback(async (id) => {
@@ -194,6 +195,11 @@ export function useJournal() {
   }, []);
 
   return {
+    mode: "local",
+    readOnly: false,
+    owner: null,
+    loadError: null,
+    reload: async () => {},
     ready,
     accounts,
     trades,

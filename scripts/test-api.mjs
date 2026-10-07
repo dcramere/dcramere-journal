@@ -3,6 +3,8 @@ import { createDevServer } from "./dev-api.mjs";
 import { query } from "../server/db.js";
 import { flushDeferred } from "../server/http.js";
 import { setMailer } from "../server/mailer.js";
+import { lastCompletedPeriods } from "../src/lib/report.js";
+import { todayInTz, wallToEpoch } from "../src/lib/tz.js";
 
 process.env.ADMIN_SETUP_TOKEN = "test-setup-token";
 process.env.APP_URL = "https://journal.test";
@@ -344,6 +346,98 @@ r = await admin.req("POST", `/api/admin/users/${zedRow.id}/reset-link`);
 ok("no link for a deactivated client", r.status === 409 && r.json.error.code === "user_disabled");
 r = await new Client().req("POST", "/api/auth/reset", { token: l2, password: "zed-fourth-password!" });
 ok("an existing link stops working when the client is deactivated", r.status === 400);
+
+// --- rapporten
+const NY = "America/New_York";
+const lastWeek = lastCompletedPeriods("week", 1, todayInTz(NY))[0];
+const lastMonth = lastCompletedPeriods("month", 1, todayInTz(NY))[0];
+const at = (date, h) => {
+  const [y, m, d] = date.split("-").map(Number);
+  return wallToEpoch(y, m, d, h, 0, 0, NY);
+};
+const midWeek = (h) => at(lastWeek.start, h) + 2 * 86400000; // woensdag
+const rt = (id, accountId, pnl, ms, over = {}) => ({ ...trade(id, accountId, pnl), openedAt: ms - 60000, closedAt: ms, ...over });
+
+const rita = new Client();
+await rita.req("POST", "/api/auth/register", { email: "rita@example.com", password: "rita-long-password", name: "Rita", consent: true });
+await rita.req("PUT", "/api/accounts/ra", account("ra"));
+const ritaRows = (await admin.req("GET", "/api/admin/users")).json.users.find((u) => u.email === "rita@example.com");
+
+r = await rita.req("GET", "/api/reports");
+ok("no trades -> no reports", r.status === 200 && r.json.reports.length === 0);
+
+await rita.req("POST", "/api/trades/bulk", {
+  trades: [
+    rt("w1", "ra", 120, midWeek(10), { mood: "Rustig" }),
+    rt("w2", "ra", 90, midWeek(11), { mood: "Rustig" }),
+    rt("w3", "ra", 80, midWeek(12), { mood: "Rustig" }),
+    rt("w4", "ra", -110, midWeek(14), { mood: "Wraakzuchtig" }),
+    rt("w5", "ra", -120, midWeek(15), { mood: "Wraakzuchtig" }),
+    rt("w6", "ra", -100, midWeek(16), { mood: "Wraakzuchtig" }),
+    rt("m1", "ra", 40, at(lastMonth.start, 12) + 86400000, { mood: "Rustig" }),
+  ],
+});
+r = await rita.req("GET", "/api/reports");
+const week = r.json.reports.find((x) => x.kind === "week" && x.periodKey === lastWeek.key);
+ok("a weekly report is created for the last completed week", !!week, JSON.stringify(r.json.reports.map((x) => x.kind + x.periodKey)));
+ok("the weekly report has the right numbers", week.data.kpis.trades === 6 && Math.abs(week.data.kpis.net - -40) < 1e-9, JSON.stringify(week?.data.kpis));
+ok("it knows calm is best and revenge is worst", week.data.good.some((i) => i.id === "best_mood" && i.p.mood === "Rustig") && week.data.improve.some((i) => i.id === "worst_mood" && i.p.mood === "Wraakzuchtig"));
+ok("it has a focus", typeof week.data.focus.id === "string");
+ok("a monthly report exists too", r.json.reports.some((x) => x.kind === "month"));
+
+const firstId = week.id;
+r = await rita.req("GET", "/api/reports");
+ok("asking again does not create duplicates", r.json.reports.filter((x) => x.kind === "week" && x.periodKey === lastWeek.key).length === 1 && r.json.reports.find((x) => x.periodKey === lastWeek.key && x.kind === "week").id === firstId);
+
+await rita.req("PUT", "/api/trades/w7", rt("w7", "ra", 200, midWeek(17), { mood: "Rustig" }));
+r = await rita.req("GET", "/api/reports");
+const refreshed = r.json.reports.find((x) => x.kind === "week" && x.periodKey === lastWeek.key);
+ok("a late trade refreshes the same report", refreshed.id === firstId && refreshed.data.kpis.trades === 7 && Math.abs(refreshed.data.kpis.net - 160) < 1e-9, JSON.stringify(refreshed.data.kpis));
+
+// a stored report from an older version is rebuilt
+await query(`UPDATE reports SET data = jsonb_set(data, '{version}', '1') WHERE id = $1::uuid`, [firstId]);
+r = await rita.req("GET", "/api/reports");
+const upgraded = r.json.reports.find((x) => x.id === firstId);
+ok("an outdated report format is rebuilt in place", upgraded && upgraded.data.version >= 2 && upgraded.data.headline?.id === "net_positive", JSON.stringify(upgraded?.data.version));
+
+// isolation and admin access
+r = await alice3.req("GET", "/api/reports");
+ok("another client sees none of rita's reports", r.status === 200 && !r.json.reports.some((x) => x.id === firstId));
+r = await new Client().req("GET", "/api/reports");
+ok("reports need a login", r.status === 401);
+r = await rita.req("GET", `/api/admin/users/${ritaRows.id}/reports`);
+ok("a client cannot use the admin reports route", r.status === 403);
+r = await admin.req("GET", `/api/admin/users/${ritaRows.id}/reports`);
+ok("the admin reads a client's reports", r.status === 200 && r.json.reports.some((x) => x.id === firstId));
+r = await rita.req("GET", "/api/me/access-log");
+ok("that visit is logged for the client", r.json.entries.some((e) => e.action === "view_journal" && e.actor === "Dino"));
+r = await admin.req("GET", "/api/admin/users/not-a-uuid/reports");
+ok("bad id -> 404", r.status === 404);
+
+r = await admin.req("GET", "/api/admin/reports/latest");
+const mine = r.json.items.find((i) => i.user.name === "Rita");
+ok("the admin overview lists rita's latest weekly report", r.status === 200 && mine && mine.report.kind === "week" && mine.report.data.kpis.trades === 7);
+ok("the overview only holds active clients, not admins", r.json.items.every((i) => i.user.name !== "Dino"));
+r = await rita.req("GET", "/api/admin/reports/latest");
+ok("a client cannot use the admin overview", r.status === 403);
+
+// cron
+delete process.env.CRON_SECRET;
+r = await new Client().req("GET", "/api/cron/reports");
+ok("cron without CRON_SECRET does nothing", r.status === 200 && r.json.skipped);
+process.env.CRON_SECRET = "cron-test-secret";
+r = await new Client().req("GET", "/api/cron/reports", undefined, { Authorization: "Bearer wrong" });
+ok("cron with a wrong secret is rejected", r.status === 401);
+r = await new Client().req("GET", "/api/cron/reports");
+ok("cron without a secret header is rejected", r.status === 401);
+r = await new Client().req("GET", "/api/cron/reports", undefined, { Authorization: "Bearer cron-test-secret" });
+ok("cron with the right secret generates reports", r.status === 200 && r.json.ok === true && r.json.users >= 1, JSON.stringify(r.json));
+delete process.env.CRON_SECRET;
+
+// removing the trades removes the report
+await rita.req("DELETE", "/api/accounts/ra");
+r = await rita.req("GET", "/api/reports");
+ok("reports disappear when the trades are gone", r.json.reports.length === 0);
 
 // no mail provider configured -> 503, and health says so
 setMailer(null);

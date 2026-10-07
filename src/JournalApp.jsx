@@ -9,6 +9,8 @@ import { JournalView, cursorFor } from "./views/JournalView.jsx";
 import { TradesView } from "./views/TradesView.jsx";
 import { StatsView } from "./views/StatsView.jsx";
 import { ImportView } from "./views/ImportView.jsx";
+import { ReportsView } from "./views/ReportsView.jsx";
+import { useReports } from "./state/useReports.js";
 import { setLang, tr } from "./i18n.js";
 import { Segmented } from "./ui/primitives.jsx";
 import { MigrateLocal } from "./components/MigrateLocal.jsx";
@@ -19,6 +21,7 @@ const TABS = [
   { id: "journal", title: "Journal", sub: "Je recente trades" },
   { id: "trades", title: "Trades", sub: "Lijst van trades" },
   { id: "stats", title: "Stats", sub: "Je prestaties" },
+  { id: "reports", title: "Rapport", sub: "Wat goed gaat" },
 ];
 
 const EMPTY_FILTERS = { q: "", day: null, direction: "all", result: "all", setup: "all", mood: "all" };
@@ -32,6 +35,7 @@ export default function JournalApp({ journal, user = null, tab, basePath = "", r
 
   const tabs = readOnly ? TABS.filter((t) => t.id !== "import") : TABS;
   const view = tabs.some((t) => t.id === tab) ? tab : "journal";
+  const reportData = useReports(journal, view === "reports");
   const [showHelp, setShowHelp] = useState(false);
   const [form, setForm] = useState(null); // null | { trade?: enrichedTrade }
   const [filters, setFilters] = useState(EMPTY_FILTERS);
@@ -176,7 +180,7 @@ export default function JournalApp({ journal, user = null, tab, basePath = "", r
 
         {journal.mode === "server" && !readOnly && user && <MigrateLocal user={user} journal={journal} />}
 
-        <nav aria-label={tr("Hoofdnavigatie")} className={`grid gap-2 mb-4 ${tabs.length === 3 ? "grid-cols-3" : "grid-cols-2 sm:grid-cols-4"}`}>
+        <nav aria-label={tr("Hoofdnavigatie")} className={`grid gap-2 mb-4 ${{ 4: "grid-cols-2 sm:grid-cols-4", 5: "grid-cols-2 sm:grid-cols-5" }[tabs.length]}`}>
           {tabs.map((t) => {
             const active = view === t.id;
             return (
@@ -210,7 +214,7 @@ export default function JournalApp({ journal, user = null, tab, basePath = "", r
           </p>
         )}
 
-        {view !== "import" && <FilterBar accounts={accounts} settings={settings} onChange={updateSettings} tz={tz} />}
+        {view !== "import" && view !== "reports" && <FilterBar accounts={accounts} settings={settings} onChange={updateSettings} tz={tz} />}
 
         {view === "journal" && (
           <JournalView ctx={ctx} settings={settings} onPickDay={pickDay} onOpenTrade={openTrade} calendarCursor={cursor} setCalendarCursor={setCalendarCursor} />
@@ -231,6 +235,7 @@ export default function JournalApp({ journal, user = null, tab, basePath = "", r
           />
         )}
         {view === "stats" && <StatsView ctx={ctx} settings={settings} />}
+        {view === "reports" && <ReportsView reports={reportData.reports} loading={reportData.loading} error={reportData.error} name={readOnly ? journal.owner?.name : null} />}
         {view === "import" && (
           <ImportView
             journal={journal}

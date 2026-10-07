@@ -14,7 +14,7 @@ function targetId(params) {
 
 // Elke keer dat de beheerder een klantjournal opent, wordt dat vastgelegd
 // (maximaal één regel per 10 minuten per klant). Klanten kunnen dit zelf inzien.
-async function logAccess(actorId, targetUserId, action) {
+export async function logAccess(actorId, targetUserId, action) {
   const now = Date.now();
   await query(
     `INSERT INTO audit_log (actor_id, target_user_id, action, created_at)

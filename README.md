@@ -124,6 +124,29 @@ In `#/admin` every client has a *Reset link* button that creates a single-use, 2
 place where the admin can do more than read (such a link can in principle take over an account), so every link is logged, visible to the
 client under *Privacy and account*, and the client consents to it at sign-up.
 
+### Automatische rapporten / Automatic reports
+
+**NL** — Elke klant krijgt per afgeronde week en maand een rapport met de openingszin (eindresultaat, en het verschil met de vorige periode), **wat goed
+gaat**, **waar te verbeteren** en één **focus** voor de komende periode. Het wordt berekend uit de gelogde trades met vaste regels (geen AI; er verlaat
+niets je database): de beste en slechtste emotie, setup, weekdag en uur (minstens 3 trades per groep), uitschieters in verlies, wisselende
+positiegrootte, groter inzetten na een verlies (tilt), overtraden, verliesreeksen, terugval, en of je je emotie invult. In het tabblad **Rapport**
+kan de klant het lezen, kopiëren of via WhatsApp delen. Als beheerder zie je in `#/admin` bovenaan het weekrapport van **alle klanten** met één
+klik naar het volledige rapport en een kant-en-klare WhatsApp-tekst per klant.
+
+**EN** — Every client gets a report for each completed week and month: a headline (result and the change versus the previous period), **what is going
+well**, **where to improve** and one **focus** for the coming period. It is calculated from the logged trades with fixed rules (no AI; nothing leaves your
+database). On the **Report** tab the client can read, copy or share it via WhatsApp. As admin, `#/admin` shows the weekly report of **all clients** at
+the top, with one click to the full report and a ready-made WhatsApp text per client.
+
+- **Wanneer / When:** rapporten worden gemaakt zodra iemand de app of het dashboard opent, en dagelijks om 06:00 UTC door een Vercel-cron
+  (`vercel.json`). Komen er later nog trades bij (bijv. een import), dan wordt het rapport automatisch opnieuw berekend. / Reports are generated when
+  someone opens the app or the dashboard, and daily at 06:00 UTC by a Vercel cron. If trades are added later, the report is recalculated.
+- **Cron beveiligen (optioneel) / Securing the cron (optional):** zet `CRON_SECRET` in Vercel (een lange willekeurige waarde, bijv. `openssl rand -base64 32`).
+  Vercel stuurt die automatisch mee; zonder `CRON_SECRET` doet de cron niets en worden rapporten alleen gemaakt als iemand de app opent. / Set
+  `CRON_SECRET` in Vercel; without it the cron does nothing and reports are only created when someone opens the app.
+- **Bezorging / Delivery:** in de app + WhatsApp-tekst via de beheerder. E-mail kan later zodra er een domein in Resend is geverifieerd. / In the app +
+  WhatsApp text via the admin. Email can follow once a domain is verified in Resend.
+
 ### Hoe het werkt / How it works
 
 - `api/[...path].js` is één Vercel-functie met een eigen router (`server/`). Wachtwoorden: scrypt. Sessies: willekeurig token in een

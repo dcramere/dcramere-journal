@@ -5,6 +5,7 @@ import { requireAdmin, requireUser } from "./auth.js";
 import * as authRoutes from "./routes/auth.js";
 import * as dataRoutes from "./routes/data.js";
 import * as adminRoutes from "./routes/admin.js";
+import * as reportRoutes from "./routes/reports.js";
 
 const routes = [];
 function add(method, pattern, auth, handler) {
@@ -42,7 +43,12 @@ add("GET", "/api/me/access-log", "user", dataRoutes.accessLog);
 add("DELETE", "/api/me/data", "user", dataRoutes.deleteMyData);
 add("DELETE", "/api/me", "user", dataRoutes.deleteMe);
 
+add("GET", "/api/reports", "user", reportRoutes.myReports);
+add("GET", "/api/cron/reports", "none", reportRoutes.cronReports);
+
 add("GET", "/api/admin/users", "admin", adminRoutes.listUsers);
+add("GET", "/api/admin/reports/latest", "admin", reportRoutes.latestReports);
+add("GET", "/api/admin/users/:id/reports", "admin", reportRoutes.userReports);
 add("GET", "/api/admin/users/:id/data", "admin", adminRoutes.getUserData);
 add("GET", "/api/admin/users/:id/screenshots/:tradeId", "admin", adminRoutes.getUserScreenshot);
 add("PATCH", "/api/admin/users/:id", "admin", adminRoutes.setUserStatus);

@@ -5,6 +5,7 @@ import { COLORS, MONO, toneColor } from "../theme.js";
 import { tr } from "../i18n.js";
 import { money, pct, relativeDay } from "../lib/format.js";
 import { Button, Card, Empty, Modal, Segmented, Select } from "../ui/primitives.jsx";
+import { focusText, habitText, insightText, periodLabel, reportShareText } from "../lib/reportText.js";
 
 const SORTS = [
   { value: "activity", label: "Laatste activiteit" },
@@ -52,6 +53,7 @@ export function AdminView({ currentUserId }) {
   const [status, setStatus] = useState("all");
   const [busyId, setBusyId] = useState(null);
   const [link, setLink] = useState(null); // { name, url, expiresAt }
+  const [weekly, setWeekly] = useState(null);
   const [copied, setCopied] = useState(false);
 
   const load = useCallback(async () => {
@@ -65,6 +67,10 @@ export function AdminView({ currentUserId }) {
 
   useEffect(() => {
     load();
+    api
+      .get("/api/admin/reports/latest")
+      .then((r) => setWeekly(r.items))
+      .catch(() => setWeekly([]));
   }, [load]);
 
   const clients = useMemo(() => (users || []).filter((u) => u.role === "client"), [users]);
@@ -134,6 +140,62 @@ export function AdminView({ currentUserId }) {
         <Kpi label={tr("Klanten met trades")} value={users ? tradingClients : "—"} />
         <Kpi label={tr("Trades in totaal")} value={users ? totalTrades : "—"} />
       </div>
+
+      <Card>
+        <div className="flex flex-wrap items-baseline justify-between gap-2 mb-3">
+          <h3 className="text-sm font-semibold" style={{ color: COLORS.text }}>
+            {weekly && weekly[0] ? tr("Weekrapporten: {label}", { label: periodLabel("week", weekly[0].report.periodKey, weekly[0].report.periodStart, weekly[0].report.periodEnd) }) : tr("Weekrapporten")}
+          </h3>
+          <span className="text-[11px]" style={{ color: COLORS.textMuted }}>
+            {tr("Automatisch berekend uit de gelogde trades van elke klant.")}
+          </span>
+        </div>
+        {weekly == null ? (
+          <Empty>{tr("Rapporten laden…")}</Empty>
+        ) : weekly.length === 0 ? (
+          <Empty>{tr("Nog geen weekrapporten. Ze verschijnen zodra een klant in een afgeronde week trades heeft gelogd.")}</Empty>
+        ) : (
+          <div className="flex flex-col">
+            {weekly.map(({ user: u, report }) => {
+              const d = report.data;
+              const good = d.good[0] ? insightText(d.good[0], d.kind) : d.habit && d.habit.tone === "good" ? habitText(d.habit) : null;
+              const improve = d.improve[0] ? insightText(d.improve[0], d.kind) : d.habit && d.habit.tone === "improve" ? habitText(d.habit) : null;
+              const label = tr("Weekrapport {label}", { label: periodLabel("week", report.periodKey, report.periodStart, report.periodEnd) });
+              return (
+                <div key={u.id} className="grid gap-x-3 gap-y-1 py-3 md:grid-cols-[minmax(0,1.2fr)_minmax(0,3fr)_auto] items-start" style={{ borderTop: `1px solid ${COLORS.grid}` }}>
+                  <div className="min-w-0">
+                    <div className="text-sm font-semibold truncate" style={{ color: COLORS.text }}>
+                      {u.name}
+                    </div>
+                    <div className="text-xs" style={{ color: toneColor(d.kpis.net), fontFamily: MONO }}>
+                      {money(d.kpis.net, { sign: true, dec: 0 })} · {d.kpis.trades} trades · {pct(d.kpis.winRate)}
+                    </div>
+                  </div>
+                  <div className="text-xs flex flex-col gap-1 min-w-0" style={{ color: COLORS.textMuted }}>
+                    {good && <span style={{ borderLeft: `2px solid ${COLORS.green}`, paddingLeft: 8 }}>{good}</span>}
+                    {improve && <span style={{ borderLeft: `2px solid ${COLORS.gold}`, paddingLeft: 8 }}>{improve}</span>}
+                    <span style={{ color: COLORS.text }}>🎯 {focusText(d.focus, d.kind)}</span>
+                  </div>
+                  <div className="flex gap-2 md:justify-end">
+                    <a href={`#/admin/user/${u.id}/reports`} className="rounded-lg px-3 py-1.5 text-xs font-semibold" style={{ background: COLORS.gold, color: "#0A0A0A" }}>
+                      {tr("Rapport")}
+                    </a>
+                    <a
+                      href={`https://wa.me/?text=${encodeURIComponent(reportShareText(report, { name: u.name, label }))}`}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="rounded-lg px-3 py-1.5 text-xs font-semibold"
+                      style={{ background: COLORS.inputBg, border: `1px solid ${COLORS.cardBorder}`, color: COLORS.text }}
+                    >
+                      WhatsApp
+                    </a>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        )}
+      </Card>
 
       <div className="flex flex-wrap items-center gap-2">
         <input

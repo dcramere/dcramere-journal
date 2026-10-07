@@ -97,6 +97,7 @@ export const monthLong = (i) => utc({ month: "long" }, new Date(Date.UTC(2023, i
 // i = 0..6, zondag eerst
 export const weekdayShort = (i) => utc({ weekday: "short" }, new Date(Date.UTC(2023, 0, 1 + i))).replace(".", "").toUpperCase();
 export const weekdayShort2 = (i) => weekdayShort(i).slice(0, 2);
+export const weekdayLong = (i) => utc({ weekday: "long" }, new Date(Date.UTC(2023, 0, 1 + i)));
 
 // "vandaag", "gisteren", "3 dagen geleden" — op dagniveau.
 export function relativeDay(ms) {

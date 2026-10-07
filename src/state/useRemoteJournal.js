@@ -26,7 +26,8 @@ export function useRemoteJournal({ userId = null } = {}) {
       const data = await api.get(base);
       const set = { ...defaultSettings(), ...data.settings };
       if (!set.lang) set.lang = defaultSettings().lang;
-      setLang(set.lang);
+      // De beheerder houdt zijn eigen taal, ook als hij het journal van een klant bekijkt.
+      if (!readOnly) setLang(set.lang);
       let acc = data.accounts;
       if (set.accountId !== "all" && !acc.some((a) => a.id === set.accountId)) set.accountId = "all";
       if (!readOnly && acc.length === 0) {

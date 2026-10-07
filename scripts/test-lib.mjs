@@ -4,6 +4,7 @@ import { computeStats, balanceSeries, growthStats, daysToTarget, projectBalance,
 import { importCsv, exportCsv, parseMoney } from "../src/lib/csv.js";
 import { wallToEpoch, partsInTz, marketDaysBetween } from "../src/lib/tz.js";
 import { rootSymbol, pointValue } from "../src/lib/contracts.js";
+import { buildReport, isoWeekKey, lastCompletedPeriods, previousPeriod } from "../src/lib/report.js";
 
 let fails = 0;
 const eq = (name, got, want, tol = 0.005) => {
@@ -126,6 +127,74 @@ const mig = migrateEntries(
 eq("migration oldest first", mig[0].id, "x1");
 eq("migration pnl = R * risk$", mig[0].pnl, 200);
 eq("migration keeps mood", mig[1].mood, "Rustig");
+
+// ---- rapporten
+eq("iso week of 2026-10-05", isoWeekKey("2026-10-05"), "2026-W41");
+eq("iso week 2026-01-01 (Thu) is week 1", isoWeekKey("2026-01-01"), "2026-W01");
+eq("iso week of 2025-12-29", isoWeekKey("2025-12-29"), "2026-W01");
+eq("iso week of 2021-01-03 belongs to 2020-W53", isoWeekKey("2021-01-03"), "2020-W53");
+const wk = lastCompletedPeriods("week", 2, "2026-10-07"); // woensdag
+eq("last completed week starts Monday 2026-09-28", wk[0].start, "2026-09-28");
+eq("...and ends Sunday 2026-10-04", wk[0].end, "2026-10-04");
+eq("previous week before that", wk[1].start, "2026-09-21");
+const mo = lastCompletedPeriods("month", 2, "2026-01-15");
+eq("last completed month across a year boundary", mo[0].key, "2025-12");
+eq("...and the one before", mo[1].key, "2025-11");
+eq("month range end", mo[0].end, "2025-12-31");
+eq("previousPeriod month", previousPeriod("month", "2026-03-01").start, "2026-02-01");
+eq("previousPeriod week", previousPeriod("week", "2026-09-28").end, "2026-09-27");
+
+// Eén week met opzet gebouwde patronen: wraakzuchtig verliest, rustig wint, grote uitschieter-loss.
+const racc = makeAccount({ name: "R", startBalance: 10000, riskUnit: "$", riskValue: 100, riskMode: "FIXED" });
+const mk = (id, day, hh, mm, pnl, mood, setup, qty = 1) => {
+  const [y, m, d] = day.split("-").map(Number);
+  const open = wallToEpoch(y, m, d, hh, mm, 0, TZ);
+  return { id, accountId: racc.id, symbol: "MNQ", direction: "Long", qty, openedAt: open, closedAt: open + 60000, pnl, fees: 0, r: null, setup, mood, lesson: "" };
+};
+const wkTrades = [
+  mk("a1", "2026-09-28", 9, 35, 150, "Rustig", "Snelweg (200)"),
+  mk("a2", "2026-09-28", 10, 5, 120, "Rustig", "Snelweg (200)"),
+  mk("a3", "2026-09-29", 9, 40, 100, "Rustig", "Snelweg (200)"),
+  mk("a4", "2026-09-29", 10, 10, -60, "Wraakzuchtig", "Vangrail (DC)"),
+  mk("a5", "2026-09-30", 13, 0, -80, "Wraakzuchtig", "Vangrail (DC)"),
+  mk("a6", "2026-09-30", 13, 20, -90, "Wraakzuchtig", "Vangrail (DC)"),
+  mk("a7", "2026-10-01", 9, 50, -400, "Gefrustreerd", "Vangrail (DC)"),
+  mk("a8", "2026-10-02", 10, 15, 90, "Rustig", "Snelweg (200)"),
+];
+const rep = buildReport({ trades: wkTrades, accounts: [racc], tz: TZ, kind: "week", start: "2026-09-28", end: "2026-10-04" });
+eq("report: trades", rep.kpis.trades, 8);
+eq("report: net", rep.kpis.net, -170);
+eq("report: netR", rep.kpis.netR, -1.7);
+eq("report: wins", rep.kpis.wins, 4);
+const ids = (l) => l.map((i) => i.id);
+eq("report: calm is the best mood", rep.good.find((i) => i.id === "best_mood")?.p.mood, "Rustig");
+eq("report: revenge is the worst mood", rep.improve.find((i) => i.id === "worst_mood")?.p.mood, "Wraakzuchtig");
+eq("report: a negative week gets a negative headline", rep.headline.id === "net_negative" && Math.abs(rep.headline.p.usd - -170) < 1e-9, true);
+eq("report: the headline is not a ranked point", !ids(rep.improve).includes("net_negative") && !ids(rep.good).includes("net_positive"), true);
+const outlierRep = buildReport({
+  trades: [
+    mk("o1", "2026-09-28", 9, 35, 50, "", ""), mk("o2", "2026-09-28", 10, 5, 50, "", ""), mk("o3", "2026-09-29", 9, 40, -40, "", ""),
+    mk("o4", "2026-09-29", 10, 10, 50, "", ""), mk("o5", "2026-09-30", 13, 0, -40, "", ""), mk("o6", "2026-09-30", 13, 20, 50, "", ""),
+    mk("o7", "2026-10-01", 9, 50, -400, "", ""), mk("o8", "2026-10-02", 10, 15, -40, "", ""),
+  ],
+  accounts: [racc], tz: TZ, kind: "week", start: "2026-09-28", end: "2026-10-04",
+});
+eq("report: a -400 outlier among small losses is flagged", ids(outlierRep.improve).includes("outlier_loss"), true, JSON.stringify(ids(outlierRep.improve)));
+eq("report: outlier multiple is large", outlierRep.improve.find((i) => i.id === "outlier_loss").p.multiple > 5, true);
+eq("report: best setup is Snelweg", rep.good.find((i) => i.id === "best_setup")?.p.setup, "Snelweg (200)");
+eq("report: at most 3 per list", rep.good.length <= 3 && rep.improve.length <= 3, true);
+eq("report: focus follows the biggest improvement", rep.focus.id, rep.improve[0].id);
+eq("report: mood logging is praised as a habit", rep.habit?.id === "mood_logged" && rep.habit.tone === "good", true);
+eq("report: missing moods are flagged as a habit", outlierRep.habit?.id === "mood_missing" && outlierRep.habit.tone === "improve", true);
+eq("report: an empty period gives no report", buildReport({ trades: wkTrades, accounts: [racc], tz: TZ, kind: "week", start: "2026-10-05", end: "2026-10-11" }), null);
+eq("report: previous week is null when it has no trades", rep.prev, null);
+const rep2 = buildReport({ trades: [...wkTrades, mk("p1", "2026-09-22", 10, 0, -300, "Rustig", "Snelweg (200)")], accounts: [racc], tz: TZ, kind: "week", start: "2026-09-28", end: "2026-10-04" });
+eq("report: previous week net is compared", rep2.prev.net, -300);
+eq("report: the headline carries the change versus last week", Math.abs(rep2.headline.p.delta - 130) < 1e-9, true);
+const tiny = buildReport({ trades: wkTrades.slice(0, 2), accounts: [racc], tz: TZ, kind: "week", start: "2026-09-28", end: "2026-10-04" });
+eq("report: a tiny sample is flagged as such", tiny.neutral.some((i) => i.id === "low_sample"), true);
+const winWeek = buildReport({ trades: wkTrades.filter((t) => ["a1", "a2", "a3", "a8"].includes(t.id)), accounts: [racc], tz: TZ, kind: "week", start: "2026-09-28", end: "2026-10-04" });
+eq("report: a good week has no improvement but a keep-going focus", winWeek.improve.length === 0 && winWeek.focus.id === "keep_going", true, JSON.stringify(winWeek.improve.map((i) => i.id)));
 
 console.log(fails ? `\n${fails} FAILED` : "\nALL PASSED");
 process.exit(fails ? 1 : 0);

@@ -1,5 +1,5 @@
 // Hash-routes: #/journal (eigen journal), #/admin (klantenlijst), #/admin/user/<id>/journal (klant, alleen lezen), #/setup.
-export const TAB_IDS = ["import", "journal", "trades", "stats"];
+export const TAB_IDS = ["import", "journal", "trades", "stats", "reports"];
 
 export function parseRoute() {
   const [path, queryString = ""] = window.location.hash.replace(/^#\/?/, "").split("?");

@@ -21,6 +21,15 @@ browserdata wist ben je je journal kwijt. Download daarom regelmatig een back-up
 Everything is stored in `localStorage` in each visitor's own browser. There is no shared database — trades on your
 phone are not on your laptop, and clearing browser data wipes the journal. Download a backup regularly (Import tab).
 
+## Handleiding in de app / In-app guide
+
+**NL** — De knop **Hoe werkt dit?** rechtsboven opent een volledige handleiding met alle functies: een trade loggen, emotie en notities, import en accounts,
+de tabbladen Journal, Trades, Stats en Rapport, filters en eenheden, account en privacy, en voor beheerders een extra onderdeel over het klantendashboard.
+Je kunt erin zoeken. De tekst staat in `src/HelpPanel.jsx` (Nederlands als bron, Engels in `src/i18n-en.js`); pas je een functie aan, werk dan ook de handleiding bij.
+
+**EN** — The **How does this work?** button top right opens a complete guide to every feature, searchable, with an extra section for admins. The text lives in
+`src/HelpPanel.jsx`; when you change a feature, update the guide too.
+
 ## Hoe gebruik je de journal / How to use it
 
 **NL**

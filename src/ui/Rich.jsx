@@ -5,8 +5,9 @@ import { tr } from "../i18n.js";
 const TAGS = { b: COLORS.text, g: COLORS.gold, red: COLORS.red, green: COLORS.green };
 
 // Vertaalde zin met opmaak: <b>vet</b>, <g>goud</g>, <red>rood</red>, <green>groen</green>.
-export function Rich({ k, p }) {
-  const s = tr(k, p);
+// `done`: de tekst is al vertaald (alleen opmaak toepassen).
+export function Rich({ k, p, done = false }) {
+  const s = done ? k : tr(k, p);
   const parts = [];
   const re = /<(b|g|red|green)>(.*?)<\/\1>/g;
   let last = 0;

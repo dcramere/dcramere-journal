@@ -176,7 +176,7 @@ export default function JournalApp({ journal, user = null, tab, basePath = "", r
           </div>
         )}
 
-        {showHelp && <HelpPanel onClose={() => setShowHelp(false)} />}
+        {showHelp && <HelpPanel onClose={() => setShowHelp(false)} isAdmin={isAdmin} />}
 
         {journal.mode === "server" && !readOnly && user && <MigrateLocal user={user} journal={journal} />}
 

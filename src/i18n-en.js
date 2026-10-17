@@ -649,5 +649,6 @@ export const EN = {
   "• <b>Resetlink</b> maakt een link (24 uur geldig, één keer te gebruiken) die je zelf naar de klant stuurt, bijvoorbeeld via WhatsApp. Dit wordt ook vastgelegd en is voor de klant zichtbaar.": "• <b>Reset link</b> creates a link (valid 24 hours, single use) that you send to the client yourself, for example via WhatsApp. This is logged too and visible to the client.",
   "• <b>Deactiveren</b> logt een klant direct uit en blokkeert inloggen; <b>Activeren</b> zet het terug. De klant en zijn data blijven bewaard.": "• <b>Deactivate</b> logs a client out immediately and blocks login; <b>Activate</b> undoes it. The client and their data are kept.",
   "• Bovenaan staan de <b>weekrapporten van alle klanten</b>, met sterkste punt, zwakste punt en focus. <b>Rapport</b> opent het volledige rapport, <b>WhatsApp</b> maakt een kant-en-klare tekst.": "• At the top are the <b>weekly reports of all clients</b>, with strongest point, weakest point and focus. <b>Report</b> opens the full report, <b>WhatsApp</b> makes a ready-made text.",
-  "• Als e-mail is ingesteld, krijg je een melding bij elke nieuwe klant.": "• If email is set up, you get a notification for every new client."
+  "• Als e-mail is ingesteld, krijg je een melding bij elke nieuwe klant.": "• If email is set up, you get a notification for every new client.",
+  "Download als PDF": "Download as PDF"
 };

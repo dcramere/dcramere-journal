@@ -25,10 +25,12 @@ phone are not on your laptop, and clearing browser data wipes the journal. Downl
 
 **NL** — De knop **Hoe werkt dit?** rechtsboven opent een volledige handleiding met alle functies: een trade loggen, emotie en notities, import en accounts,
 de tabbladen Journal, Trades, Stats en Rapport, filters en eenheden, account en privacy, en voor beheerders een extra onderdeel over het klantendashboard.
-Je kunt erin zoeken. De tekst staat in `src/HelpPanel.jsx` (Nederlands als bron, Engels in `src/i18n-en.js`); pas je een functie aan, werk dan ook de handleiding bij.
+Je kunt erin zoeken. De tekst staat in `src/lib/guide.js` (Nederlands als bron, Engels in `src/i18n-en.js`); pas je een functie aan, werk dan ook de handleiding bij (en draai `npm run guide:pdf`).
 
 **EN** — The **How does this work?** button top right opens a complete guide to every feature, searchable, with an extra section for admins. The text lives in
-`src/HelpPanel.jsx`; when you change a feature, update the guide too.
+`src/lib/guide.js`; when you change a feature, update the guide too.
+
+**PDF** — de handleiding bestaat ook als PDF (NL en EN, 3 pagina's), gemaakt uit dezelfde tekst als de app (`src/lib/guide.js`). Voor klanten: `public/guide/` (de app linkt ernaar via *Download als PDF*). Voor jou als coach, met het beheerdersonderdeel erbij: `docs/`. Vernieuwen na een tekstwijziging: `npm run guide:pdf` (de Vercel-build doet dat ook automatisch). / The guide is also available as a PDF (NL and EN, 3 pages), generated from the same text as the app. Client versions live in `public/guide/` (linked from the app); coach versions with the admin section in `docs/`. Refresh with `npm run guide:pdf` (the Vercel build does it automatically).
 
 ## Hoe gebruik je de journal / How to use it
 

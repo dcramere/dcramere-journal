@@ -15,6 +15,11 @@ const FONTS = {
   Serif: `${FONT_DIR("lora")}/lora-latin-700-normal.woff`,
 };
 
+const LOGO = resolve("scripts/assets/dcramere-logo.png");
+const CREAM = "#F1ECDD";
+const CREAM_MUTED = "#A39B86";
+const GOLD_LIGHT = "#D4AF37";
+
 const URL_TEXT = "dcramere-journal.vercel.app";
 const INK = "#1A1710";
 const MUTED = "#6B6455";
@@ -24,6 +29,8 @@ const RULE = "#D9D2BE";
 const WORDS = {
   nl: {
     tag: "SEE · DECIPHER · TRADE",
+    cover: "Handleiding",
+    coverCoach: "Handleiding voor coaches",
     title: "Handleiding",
     coachTitle: "Handleiding voor coaches",
     intro: "Alles wat je met het journal kunt, stap voor stap. De knop ‘Hoe werkt dit?’ in de app toont dezelfde uitleg.",
@@ -33,6 +40,8 @@ const WORDS = {
   },
   en: {
     tag: "SEE · DECIPHER · TRADE",
+    cover: "User guide",
+    coverCoach: "Coach guide",
     title: "User guide",
     coachTitle: "Coach guide",
     intro: "Everything you can do with the journal, step by step. The ‘How does this work?’ button in the app shows the same explanation.",
@@ -89,7 +98,24 @@ function build({ lang, admin, file }) {
     if (doc.y + h > bottom()) doc.addPage();
   };
 
-  // Kop
+  // Omslag: zwart met het logo, in de huisstijl van de app.
+  const W = doc.page.width;
+  const H = doc.page.height;
+  doc.rect(0, 0, W, H).fill("#000000");
+  const logoSize = 330;
+  doc.image(LOGO, (W - logoSize) / 2, 128, { width: logoSize });
+  let y = 128 + logoSize + 30;
+  doc.rect(W / 2 - 24, y, 48, 1.2).fill(GOLD_LIGHT);
+  y += 26;
+  doc.font("Serif").fontSize(34).fillColor(GOLD_LIGHT).text(admin ? w.coverCoach : w.cover, 0, y, { width: W, align: "center" });
+  y = doc.y + 10;
+  doc.font("Body").fontSize(12).fillColor(CREAM).text("DCRAMERE Journal", 0, y, { width: W, align: "center" });
+  y = doc.y + 8;
+  doc.font("Body").fontSize(8.5).fillColor(CREAM_MUTED).text(w.tag, 0, y, { width: W, align: "center", characterSpacing: 2.5 });
+  doc.font("Bold").fontSize(10.5).fillColor(GOLD_LIGHT).text(URL_TEXT, 0, H - 78, { width: W, align: "center", link: `https://${URL_TEXT}` });
+
+  // Inhoud
+  doc.addPage();
   doc.font("Serif").fontSize(26).fillColor(GOLD).text("DCRAMERE JOURNAL", left, doc.y, { characterSpacing: 1 });
   doc.moveDown(0.2);
   doc.font("Body").fontSize(8.5).fillColor(MUTED).text(w.tag, { characterSpacing: 2 });
@@ -156,14 +182,14 @@ function build({ lang, admin, file }) {
 
   // Voet op elke pagina
   const range = doc.bufferedPageRange();
-  for (let i = 0; i < range.count; i += 1) {
+  for (let i = 1; i < range.count; i += 1) {
     doc.switchToPage(range.start + i);
     const y = doc.page.height - 38;
     doc.page.margins.bottom = 0; // zodat tekst in de voet geen nieuwe pagina forceert
     doc.moveTo(left, y - 8).lineTo(left + width, y - 8).lineWidth(0.5).strokeColor(RULE).stroke();
     doc.font("Body").fontSize(8).fillColor(MUTED);
     doc.text(`DCRAMERE Journal · ${URL_TEXT}`, left, y, { width: width / 2, lineBreak: false });
-    doc.text(w.page(i + 1, range.count), left + width / 2, y, { width: width / 2, align: "right", lineBreak: false });
+    doc.text(w.page(i, range.count - 1), left + width / 2, y, { width: width / 2, align: "right", lineBreak: false });
   }
   doc.end();
   return new Promise((resolve) => doc.on("end", () => resolve(file)));

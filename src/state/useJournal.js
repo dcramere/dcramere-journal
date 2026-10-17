@@ -129,7 +129,10 @@ export function useJournal() {
     async (id) => {
       const doomed = trades.filter((t) => t.accountId === id);
       setTrades((list) => list.filter((t) => t.accountId !== id));
-      setAccounts((list) => list.filter((a) => a.id !== id));
+      setAccounts((list) => {
+        const rest = list.filter((a) => a.id !== id);
+        return rest.length ? rest : [makeAccount()];
+      });
       setSettings((s) => (s.accountId === id ? { ...s, accountId: "all" } : s));
       for (const t of doomed) {
         try {

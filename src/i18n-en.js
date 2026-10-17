@@ -20,7 +20,6 @@ export const EN = {
   "Aantal contracten": "Number of contracts",
   "Aantal moet groter dan 0 zijn.": "Quantity must be greater than 0.",
   "Account": "Account",
-  "Account \"{name}\" en zijn {n} trades definitief verwijderen?": "Permanently delete account \"{name}\" and its {n} trades?",
   "Account toevoegen": "Add account",
   "Account verwijderen": "Delete account",
   "Accountsaldo": "Account balance",
@@ -572,5 +571,11 @@ export const EN = {
   "Dat is {delta} slechter dan {prev}.": "That is {delta} worse than {prev}.",
   "Nog geen account? Maak er eerst een aan.": "No account yet? Create one first.",
   "Wel een account maar het wachtwoord kwijt? Kies hieronder ‘Wachtwoord vergeten?’.": "Have an account but lost the password? Choose ‘Forgot your password?’ below.",
-  "Wel een account maar het wachtwoord kwijt? Vraag je coach om een resetlink.": "Have an account but lost the password? Ask your coach for a reset link."
+  "Wel een account maar het wachtwoord kwijt? Vraag je coach om een resetlink.": "Have an account but lost the password? Ask your coach for a reset link.",
+  "Account {name} verwijderen": "Delete account {name}",
+  "Account \"{name}\" en zijn {n} trades definitief verwijderen? Dit kan niet ongedaan worden gemaakt.": "Permanently delete account \"{name}\" and its {n} trades? This cannot be undone.",
+  "Het lege account \"{name}\" verwijderen?": "Delete the empty account \"{name}\"?",
+  "Deze {n} lege accounts verwijderen?": "Delete these {n} empty accounts?",
+  "{n} van je accounts hebben geen trades.": "{n} of your accounts have no trades.",
+  "Lege accounts opruimen": "Clean up empty accounts"
 };

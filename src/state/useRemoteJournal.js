@@ -173,10 +173,14 @@ export function useRemoteJournal({ userId = null } = {}) {
   const deleteAccount = useCallback(
     async (id) => {
       if (readOnly) return;
+      const rest = live.current.accounts.filter((a) => a.id !== id);
+      const fresh = rest.length ? null : makeAccount();
       setTrades((list) => list.filter((t) => t.accountId !== id));
-      setAccounts((list) => list.filter((a) => a.id !== id));
+      setAccounts(fresh ? [fresh] : rest);
       setSettings((s) => (s.accountId === id ? { ...s, accountId: "all" } : s));
       await quiet(persist(() => api.del(`/api/accounts/${id}`)));
+      // Er moet altijd één account zijn om trades aan te koppelen.
+      if (fresh) await quiet(persist(() => api.put(`/api/accounts/${fresh.id}`, fresh)));
     },
     [readOnly, persist]
   );

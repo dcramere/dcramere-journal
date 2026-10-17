@@ -54,6 +54,13 @@ function NumField({ label, value, onCommit, suffix, min }) {
   );
 }
 
+function confirmDelete(account, tradeCount, onDelete) {
+  const msg = tradeCount
+    ? tr("Account \"{name}\" en zijn {n} trades definitief verwijderen? Dit kan niet ongedaan worden gemaakt.", { name: account.name, n: tradeCount })
+    : tr("Het lege account \"{name}\" verwijderen?", { name: account.name });
+  if (window.confirm(msg)) onDelete();
+}
+
 function AccountSettings({ account, onUpdate, onDelete, tradeCount }) {
   return (
     <div className="flex flex-col gap-3">
@@ -94,7 +101,7 @@ function AccountSettings({ account, onUpdate, onDelete, tradeCount }) {
         <Button
           variant="danger"
           onClick={() => {
-            if (window.confirm(tr("Account \"{name}\" en zijn {n} trades definitief verwijderen?", { name: account.name, n: tradeCount }))) onDelete();
+            confirmDelete(account, tradeCount, onDelete);
           }}
         >
           <span className="inline-flex items-center gap-1">
@@ -186,9 +193,21 @@ function AccountCard({ account, tradeCount, balance, tz, onImportFile, onUpdate,
             {tradeCount} {tradeCount === 1 ? "trade" : "trades"} · {account.broker}
           </div>
         </div>
-        <span className="text-[9px] tracking-widest rounded px-1.5 py-0.5" style={{ color: COLORS.gold, border: `1px solid ${COLORS.gold}`, fontFamily: MONO }}>
-          {account.type}
-        </span>
+        <div className="flex items-center gap-2 shrink-0">
+          <span className="text-[9px] tracking-widest rounded px-1.5 py-0.5" style={{ color: COLORS.gold, border: `1px solid ${COLORS.gold}`, fontFamily: MONO }}>
+            {account.type}
+          </span>
+          <button
+            type="button"
+            onClick={() => confirmDelete(account, tradeCount, onDelete)}
+            aria-label={tr("Account {name} verwijderen", { name: account.name })}
+            title={tr("Account verwijderen")}
+            className="rounded-lg p-1.5"
+            style={{ color: COLORS.red, border: `1px solid ${COLORS.cardBorder}`, background: COLORS.inputBg }}
+          >
+            <Trash2 size={14} />
+          </button>
+        </div>
       </div>
 
       <div
@@ -361,8 +380,28 @@ export function ImportView({ journal, accountBalances, tradeCounts, footer = nul
     }
   }
 
+  const emptyAccounts = accounts.filter((a) => !(tradeCounts.get(a.id) || 0));
+  // Opruimen kan alleen als er ook minstens één account met trades blijft staan.
+  const canClean = emptyAccounts.length > 0 && emptyAccounts.length < accounts.length;
+
+  async function cleanEmpty() {
+    const names = emptyAccounts.map((a) => `• ${a.name}`).join("\n");
+    if (!window.confirm(tr("Deze {n} lege accounts verwijderen?", { n: emptyAccounts.length }) + `\n\n${names}`)) return;
+    for (const a of emptyAccounts) await deleteAccount(a.id);
+  }
+
   return (
     <div className="flex flex-col gap-4">
+      {canClean && (
+        <div className="flex flex-wrap items-center justify-between gap-2 rounded-xl px-4 py-3 text-xs" style={{ background: COLORS.card, border: `1px dashed ${COLORS.cardBorder}`, color: COLORS.textMuted }}>
+          <span>{tr("{n} van je accounts hebben geen trades.", { n: emptyAccounts.length })}</span>
+          <Button variant="danger" onClick={cleanEmpty}>
+            <span className="inline-flex items-center gap-1">
+              <Trash2 size={12} /> {tr("Lege accounts opruimen")}
+            </span>
+          </Button>
+        </div>
+      )}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
         {accounts.map((a) => (
           <AccountCard

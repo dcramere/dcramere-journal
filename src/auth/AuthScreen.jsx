@@ -1,5 +1,4 @@
 import React, { useState } from "react";
-import { BookOpen } from "lucide-react";
 import { api } from "../api.js";
 import { COLORS, MONO } from "../theme.js";
 import { tr } from "../i18n.js";
@@ -88,13 +87,7 @@ export function AuthScreen({ lang, onLang, onAuthed, setup = false, needsSetup =
   return (
     <div style={{ background: COLORS.bg, minHeight: "100vh", color: COLORS.text }} className="font-sans flex flex-col items-center px-4 py-8">
       <div className="w-full max-w-sm flex flex-col gap-4">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-2 min-w-0">
-            <BookOpen size={22} color={COLORS.gold} />
-            <h1 style={{ fontFamily: "Georgia, serif", color: COLORS.gold, letterSpacing: "0.04em" }} className="text-lg font-bold truncate">
-              {tr("DCRAMERE JOURNAL")}
-            </h1>
-          </div>
+        <div className="flex justify-end">
           <Segmented
             size="sm"
             value={lang}
@@ -106,9 +99,9 @@ export function AuthScreen({ lang, onLang, onAuthed, setup = false, needsSetup =
             ]}
           />
         </div>
-        <p className="text-xs tracking-widest" style={{ color: COLORS.textMuted }}>
-          {tr("SEE · DECIPHER · TRADE")}
-        </p>
+        <h1 className="flex justify-center">
+          <img src="/brand/logo-journal.png" alt="DCRAMERE Journal — See. Decipher. Trade." width="640" height="731" style={{ width: "min(62vw, 230px)", height: "auto" }} />
+        </h1>
 
         <form
           onSubmit={submit}

@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useState } from "react";
-import { ArrowLeft, BookOpen, HelpCircle, LogOut, Plus, Users } from "lucide-react";
+import { ArrowLeft, HelpCircle, LogOut, Plus, Users } from "lucide-react";
 import { COLORS, MONO } from "./theme.js";
 import { useScope } from "./state/useScope.js";
 import { FilterBar } from "./components/FilterBar.jsx";
@@ -107,7 +107,7 @@ export default function JournalApp({ journal, user = null, tab, basePath = "", r
       <div className="max-w-6xl mx-auto px-4 py-6 sm:py-8">
         <header className="flex flex-wrap items-center justify-between gap-x-3 gap-y-2 mb-1">
           <div className="flex items-center gap-3 min-w-0">
-            <BookOpen size={22} color={COLORS.gold} />
+            <img src="/brand/emblem.png" alt="" width="41" height="34" style={{ height: 34, width: "auto" }} />
             <h1 style={{ fontFamily: "Georgia, serif", color: COLORS.gold, letterSpacing: "0.04em" }} className="text-lg min-[380px]:text-xl sm:text-2xl font-bold truncate">
               {tr("DCRAMERE JOURNAL")}
             </h1>

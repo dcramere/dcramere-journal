@@ -15,7 +15,7 @@ const FONTS = {
   Serif: `${FONT_DIR("lora")}/lora-latin-700-normal.woff`,
 };
 
-const LOGO = resolve("scripts/assets/dcramere-logo.png");
+const LOGO = resolve("scripts/assets/dcramere-journal-logo.png");
 const CREAM = "#F1ECDD";
 const GOLD_LIGHT = "#D4AF37";
 
@@ -101,9 +101,11 @@ function build({ lang, admin, file }) {
   const W = doc.page.width;
   const H = doc.page.height;
   doc.rect(0, 0, W, H).fill("#000000");
-  const logoSize = 360;
-  doc.image(LOGO, (W - logoSize) / 2, 110, { width: logoSize });
-  let y = 110 + logoSize + 26;
+  const logoSize = 340;
+  const logo = doc.openImage(LOGO);
+  const logoHeight = (logoSize * logo.height) / logo.width;
+  doc.image(logo, (W - logoSize) / 2, 96, { width: logoSize });
+  let y = 96 + logoHeight + 24;
   doc.rect(W / 2 - 24, y, 48, 1.2).fill(GOLD_LIGHT);
   y += 26;
   doc.font("Serif").fontSize(34).fillColor(GOLD_LIGHT).text(admin ? w.coverCoach : w.cover, 0, y, { width: W, align: "center" });

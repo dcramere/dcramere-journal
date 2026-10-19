@@ -17,7 +17,6 @@ const FONTS = {
 
 const LOGO = resolve("scripts/assets/dcramere-logo.png");
 const CREAM = "#F1ECDD";
-const CREAM_MUTED = "#A39B86";
 const GOLD_LIGHT = "#D4AF37";
 
 const URL_TEXT = "dcramere-journal.vercel.app";
@@ -102,16 +101,14 @@ function build({ lang, admin, file }) {
   const W = doc.page.width;
   const H = doc.page.height;
   doc.rect(0, 0, W, H).fill("#000000");
-  const logoSize = 330;
-  doc.image(LOGO, (W - logoSize) / 2, 128, { width: logoSize });
-  let y = 128 + logoSize + 30;
+  const logoSize = 360;
+  doc.image(LOGO, (W - logoSize) / 2, 110, { width: logoSize });
+  let y = 110 + logoSize + 26;
   doc.rect(W / 2 - 24, y, 48, 1.2).fill(GOLD_LIGHT);
   y += 26;
   doc.font("Serif").fontSize(34).fillColor(GOLD_LIGHT).text(admin ? w.coverCoach : w.cover, 0, y, { width: W, align: "center" });
   y = doc.y + 10;
   doc.font("Body").fontSize(12).fillColor(CREAM).text("DCRAMERE Journal", 0, y, { width: W, align: "center" });
-  y = doc.y + 8;
-  doc.font("Body").fontSize(8.5).fillColor(CREAM_MUTED).text(w.tag, 0, y, { width: W, align: "center", characterSpacing: 2.5 });
   doc.font("Bold").fontSize(10.5).fillColor(GOLD_LIGHT).text(URL_TEXT, 0, H - 78, { width: W, align: "center", link: `https://${URL_TEXT}` });
 
   // Inhoud

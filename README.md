@@ -25,12 +25,12 @@ phone are not on your laptop, and clearing browser data wipes the journal. Downl
 
 **NL** — Het journal kan als app-icoon op het beginscherm van een telefoon, met het DCRAMERE-embleem en de naam *DC Journal*, en opent dan schermvullend zonder
 adresbalk. **iPhone (Safari):** deel-knop → *Zet op beginscherm*. **Android (Chrome):** menu ⋮ → *Toevoegen aan startscherm* of *App installeren*. Op een iPhone werkt
-de app vanaf het beginscherm met zijn eigen opslag: je logt daar één keer opnieuw in. De iconen worden gemaakt met `python3 scripts/make-icons.py` uit
-`scripts/assets/dcramere-logo.png`; het manifest staat in `public/manifest.webmanifest`.
+de app vanaf het beginscherm met zijn eigen opslag: je logt daar één keer opnieuw in. De iconen (het embleem met ring, oog en candlesticks, zonder de letters) worden gemaakt met `python3 scripts/make-icons.py` uit
+`scripts/assets/dcramere-logo.png`, je originele logo; het manifest staat in `public/manifest.webmanifest`.
 
 **EN** — The journal can be added to a phone's home screen with the DCRAMERE emblem and the name *DC Journal*, and then opens full screen without an address bar.
 **iPhone (Safari):** share button → *Add to Home Screen*. **Android (Chrome):** menu ⋮ → *Add to Home screen* or *Install app*. On an iPhone the home-screen app has
-its own storage, so you log in once more there. Icons are generated with `python3 scripts/make-icons.py`; the manifest lives in `public/manifest.webmanifest`.
+its own storage, so you log in once more there. Icons (the emblem with ring, eye and candlesticks, without the lettering) are generated with `python3 scripts/make-icons.py` from your original logo; the manifest lives in `public/manifest.webmanifest`.
 
 ## Handleiding in de app / In-app guide
 

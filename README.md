@@ -21,6 +21,17 @@ browserdata wist ben je je journal kwijt. Download daarom regelmatig een back-up
 Everything is stored in `localStorage` in each visitor's own browser. There is no shared database — trades on your
 phone are not on your laptop, and clearing browser data wipes the journal. Download a backup regularly (Import tab).
 
+## Op je beginscherm / On your home screen
+
+**NL** — Het journal kan als app-icoon op het beginscherm van een telefoon, met het DCRAMERE-embleem en de naam *DC Journal*, en opent dan schermvullend zonder
+adresbalk. **iPhone (Safari):** deel-knop → *Zet op beginscherm*. **Android (Chrome):** menu ⋮ → *Toevoegen aan startscherm* of *App installeren*. Op een iPhone werkt
+de app vanaf het beginscherm met zijn eigen opslag: je logt daar één keer opnieuw in. De iconen worden gemaakt met `python3 scripts/make-icons.py` uit
+`scripts/assets/dcramere-logo.png`; het manifest staat in `public/manifest.webmanifest`.
+
+**EN** — The journal can be added to a phone's home screen with the DCRAMERE emblem and the name *DC Journal*, and then opens full screen without an address bar.
+**iPhone (Safari):** share button → *Add to Home Screen*. **Android (Chrome):** menu ⋮ → *Add to Home screen* or *Install app*. On an iPhone the home-screen app has
+its own storage, so you log in once more there. Icons are generated with `python3 scripts/make-icons.py`; the manifest lives in `public/manifest.webmanifest`.
+
 ## Handleiding in de app / In-app guide
 
 **NL** — De knop **Hoe werkt dit?** rechtsboven opent een volledige handleiding met alle functies: een trade loggen, emotie en notities, import en accounts,

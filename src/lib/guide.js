@@ -84,6 +84,7 @@ export const GUIDE_SECTIONS = [
       T("• <b>Reeksen</b>: je langste winst- en verliesreeksen."),
       T("• <b>Jouw statistieken</b>: resultaat, dagen, de trades zelf, maanden, reeksen en drawdown in één overzicht."),
       T("• <b>Uitsplitsingen</b> per weekdag, uur, contract, richting, emotie en setup. Wissel de weergave tussen <b>Win %, Netto, Gem. winst, Gem. verlies, Gem. duur</b> en <b>Overzicht</b>."),
+      T("• Ook op <b>Stats</b> kun je kaarten verplaatsen, verbergen en toevoegen met <b>Indelen / widget toevoegen</b>. Journal en Stats onthouden elk hun eigen indelingen."),
       T("• <b>Op nieuwsdagen</b>: hoe je trades uitpakken op dagen met geplande nieuwsberichten, per soort bericht."),
       T("• <b>Tijd tot doel</b> en <b>Effectieve groeisnelheid</b>: wanneer je een dollardoel haalt als je tempo gelijk blijft. Het is een hypothese, geen voorspelling."),
       T("• <b>Monte Carlo, Kans op ruïne</b> en <b>Kelly-criterium</b> verschijnen pas vanaf 100 trades. Daarvoor is de steekproef te klein om iets te zeggen."),

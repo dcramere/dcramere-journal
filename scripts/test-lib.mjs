@@ -199,18 +199,20 @@ const winWeek = buildReport({ trades: wkTrades.filter((t) => ["a1", "a2", "a3", 
 eq("report: a good week has no improvement but a keep-going focus", winWeek.improve.length === 0 && winWeek.focus.id === "keep_going", true, JSON.stringify(winWeek.improve.map((i) => i.id)));
 
 // Dashboard-indeling
-eq("layout: default shows every widget", L.orderFor(L.emptyState()).length, L.WIDGET_IDS.length);
-eq("layout: moving down swaps with the next one", L.moveWidget(["a", "b", "c"], "a", 1).join(), "b,a,c");
-eq("layout: moving past the end changes nothing", L.moveWidget(["a", "b"], "b", 1).join(), "a,b");
-eq("layout: hiding removes a widget and lists it as hidden", L.hiddenOf(L.hideWidget(L.DEFAULT_ORDER, "cumulative")).join(), "cumulative");
-eq("layout: adding appends once", L.addWidget(L.hideWidget(L.DEFAULT_ORDER, "mood"), "mood").at(-1), "mood");
-eq("layout: unknown widget ids are dropped", L.cleanOrder(["balance", "nope", "balance", "year"]).join(), "balance,year");
-const ls = L.saveAs(L.emptyState(), "  Rustig   dag ", ["year", "balance", "x"]);
+const K = L.JOURNAL_LAYOUTS;
+eq("layout: default shows every widget", K.orderFor(L.emptyState()).length, K.ids.length);
+eq("layout: moving down swaps with the next one", K.moveWidget(["a", "b", "c"], "a", 1).join(), "b,a,c");
+eq("layout: moving past the end changes nothing", K.moveWidget(["a", "b"], "b", 1).join(), "a,b");
+eq("layout: hiding removes a widget and lists it as hidden", K.hiddenOf(K.hideWidget(K.defaultOrder, "cumulative")).join(), "cumulative");
+eq("layout: adding appends once", K.addWidget(K.hideWidget(K.defaultOrder, "mood"), "mood").at(-1), "mood");
+eq("layout: stats has its own widget set", L.STATS_LAYOUTS.ids.includes("monteCarlo") && !K.ids.includes("monteCarlo"), true);
+eq("layout: unknown widget ids are dropped", K.cleanOrder(["balance", "nope", "balance", "year"]).join(), "balance,year");
+const ls = K.saveAs(L.emptyState(), "  Rustig   dag ", ["year", "balance", "x"]);
 eq("layout: saving makes it active with a cleaned name", ls.active, "Rustig dag");
-eq("layout: saved order is kept and cleaned", L.orderFor(ls).join(), "year,balance");
-eq("layout: the Default name cannot be overwritten", L.saveAs(L.emptyState(), "Default", ["year"]).active, "Default");
-eq("layout: deleting the active layout falls back to Default", L.removeLayout(ls, "Rustig dag").active, "Default");
-eq("layout: broken storage gives a safe default", L.normalize({ active: 5, saved: { "": ["year"], a: "oops" } }).active, "Default");
+eq("layout: saved order is kept and cleaned", K.orderFor(ls).join(), "year,balance");
+eq("layout: the Default name cannot be overwritten", K.saveAs(L.emptyState(), "Default", ["year"]).active, "Default");
+eq("layout: deleting the active layout falls back to Default", K.removeLayout(ls, "Rustig dag").active, "Default");
+eq("layout: broken storage gives a safe default", K.normalize({ active: 5, saved: { "": ["year"], a: "oops" } }).active, "Default");
 
 // Nieuwskalender: oktober 2026 moet overeenkomen met wat trade1348 toont.
 const octNews = Object.fromEntries(N.newsBetween("2026-10-01", "2026-10-31").reduce((m, e) => (m.set(e.date, [...(m.get(e.date) || []), e.id]), m), new Map()));

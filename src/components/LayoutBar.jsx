@@ -3,10 +3,10 @@ import { Plus, Trash2 } from "lucide-react";
 import { COLORS, MONO } from "../theme.js";
 import { tr } from "../i18n.js";
 import { Button, Select, TextInput } from "../ui/primitives.jsx";
-import { DEFAULT_NAME, MAX_NAME, cleanName, hiddenOf } from "../lib/layout.js";
+import { DEFAULT_NAME, MAX_NAME, cleanName } from "../lib/layout.js";
 
 // Kiezen tussen indelingen en het aanpassen ervan: widgets verplaatsen, verbergen, terugzetten en opslaan onder een naam.
-export function LayoutBar({ layouts, arranging, draft, labelOf, onPick, onStart, onCancel, onSave, onDelete, onAdd, onReset }) {
+export function LayoutBar({ kit, layouts, arranging, draft, labelOf, onPick, onStart, onCancel, onSave, onDelete, onAdd, onReset }) {
   const [name, setName] = useState("");
   const names = Object.keys(layouts.saved);
   const options = [{ value: DEFAULT_NAME, label: tr("Standaard"), raw: true }, ...names.map((n) => ({ value: n, label: n, raw: true }))];
@@ -34,7 +34,7 @@ export function LayoutBar({ layouts, arranging, draft, labelOf, onPick, onStart,
     );
   }
 
-  const hidden = hiddenOf(draft);
+  const hidden = kit.hiddenOf(draft);
   return (
     <div className="rounded-xl p-3 flex flex-col gap-3" style={{ border: `1px solid ${COLORS.gold}`, background: COLORS.card }}>
       <p className="text-xs" style={{ color: COLORS.textMuted }}>

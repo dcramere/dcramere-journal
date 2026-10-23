@@ -705,5 +705,7 @@ export const EN = {
   "{n} dagen later": "{n} days later",
   "• <b>Nieuws</b>: een goud puntje in de kalender betekent dat die dag Amerikaans nieuws gepland staat (CPI, banenrapport, Fed-besluit en meer). Beweeg over de dag voor de naam. De kaart <b>Nieuws vooruit</b> toont de komende 7 dagen, tijden in New York.": "• <b>News</b>: a gold dot in the calendar means US news is scheduled that day (CPI, jobs report, Fed decision and more). Hover over the day for its name. The <b>News ahead</b> card shows the next 7 days, times in New York.",
   "• <b>Op nieuwsdagen</b>: hoe je trades uitpakken op dagen met geplande nieuwsberichten, per soort bericht.": "• <b>On news days</b>: how your trades turn out on days with scheduled news, per type of release.",
-  "• Klik een trade voor ook <b>instap en uitstap, tijden, duur en fills</b>. Een trade die over meerdere dagen liep toont <b>‘dagen later’</b>.": "• Click a trade to also see <b>entry and exit, times, duration and fills</b>. A trade held over several days shows <b>‘days later’</b>."
+  "• Klik een trade voor ook <b>instap en uitstap, tijden, duur en fills</b>. Een trade die over meerdere dagen liep toont <b>‘dagen later’</b>.": "• Click a trade to also see <b>entry and exit, times, duration and fills</b>. A trade held over several days shows <b>‘days later’</b>.",
+  "Jaar in één oogopslag": "Year at a glance",
+  "• Ook op <b>Stats</b> kun je kaarten verplaatsen, verbergen en toevoegen met <b>Indelen / widget toevoegen</b>. Journal en Stats onthouden elk hun eigen indelingen.": "• On <b>Stats</b> too you can move, hide and add cards with <b>Arrange / add widgets</b>. Journal and Stats each remember their own layouts."
 };

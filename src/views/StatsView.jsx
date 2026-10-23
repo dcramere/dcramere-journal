@@ -25,6 +25,8 @@ import { BarChart, LineChart, YearGrid } from "../ui/charts.jsx";
 import { Card, CardTitle, Empty, Segmented, Select } from "../ui/primitives.jsx";
 import { periodTag } from "./JournalView.jsx";
 import { newsDayStats, newsShort } from "../lib/news.js";
+import { WidgetGrid } from "../components/WidgetGrid.jsx";
+import { STATS_LAYOUTS } from "../lib/layout.js";
 import { tr } from "../i18n.js";
 
 function StatRow({ label, value, sub, color }) {
@@ -155,6 +157,8 @@ function FanChart({ mc }) {
   );
 }
 
+const SPANS = { chart: "lg:col-span-3", full: "lg:col-span-6" };
+
 export function StatsView({ ctx, settings }) {
   const { stats, unit, balance, scoped, accountTrades, scopedAccounts, today } = ctx;
   const tag = periodTag(settings.period);
@@ -181,8 +185,11 @@ export function StatsView({ ctx, settings }) {
   const dollars = useMemo(() => scoped.map((t) => t.v.$), [scoped]);
   const mc = useMemo(() => monteCarlo(dollars), [dollars]);
   const startBal = scopedAccounts.reduce((s, a) => s + (Number(a.startBalance) || 0), 0);
-  const ruin = useMemo(() => riskOfRuin(dollars, (startBal * Number(ruinPct)) / 100), [dollars, startBal, ruinPct]); const k = kelly(stats.winRate, stats.ratio); const firstAccount = scopedAccounts[0]; const plannedRisk = firstAccount ? firstAccount.riskUnit === "$" ? (Number(firstAccount.riskValue) || 0) / (Number(firstAccount.startBalance) || 1) : (Number(firstAccount.riskValue) || 0) / 100 : null; const s = stats; const dd = s.drawdown; return (
-    <div className="flex flex-col gap-4">
+  const ruin = useMemo(() => riskOfRuin(dollars, (startBal * Number(ruinPct)) / 100), [dollars, startBal, ruinPct]); const k = kelly(stats.winRate, stats.ratio); const firstAccount = scopedAccounts[0]; const plannedRisk = firstAccount ? firstAccount.riskUnit === "$" ? (Number(firstAccount.riskValue) || 0) / (Number(firstAccount.startBalance) || 1) : (Number(firstAccount.riskValue) || 0) / 100 : null; const s = stats; const dd = s.drawdown; const widgets = {
+    year: {
+      label: "Jaar in één oogopslag",
+      size: "full",
+      render: () => (
       <Card>
         <div className="flex items-center justify-between mb-2">
           <CardTitle title={tr("{year} in één oogopslag", { year })} help={tr("Elke dag van het jaar: groen = winst, rood = verlies, hoe donkerder hoe groter.")} />
@@ -196,8 +203,12 @@ export function StatsView({ ctx, settings }) {
         </p>
         <YearGrid year={year} days={yearDays} />
       </Card>
-
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
+      ),
+    },
+    cumulative: {
+      label: "Cumulatief resultaat",
+      size: "chart",
+      render: () => (
         <Card>
           <CardTitle title={tr("Cumulatief resultaat")} help={tr("Elke handelsdag opgeteld. De vorm zegt meer dan het eindpunt.")} tag={tag} />
           <LineChart
@@ -207,6 +218,12 @@ export function StatsView({ ctx, settings }) {
             series={[{ name: "Cumulatief", color: COLORS.gold, values: s.series.map((x) => x.cum), area: true, pillFormat: (v) => unitValue(v, unit, { dec: 0 }) }]}
           />
         </Card>
+      ),
+    },
+    balance: {
+      label: "Accountsaldo",
+      size: "chart",
+      render: () => (
         <Card>
           <CardTitle title={tr("Accountsaldo")} help={tr("Altijd in dollars. Goud: stortingen of opnames.")} tag={tr("ALLE TIJD")} />
           <LineChart
@@ -222,6 +239,12 @@ export function StatsView({ ctx, settings }) {
             </p>
           )}
         </Card>
+      ),
+    },
+    drawdown: {
+      label: "Drawdown",
+      size: "chart",
+      render: () => (
         <Card>
           <CardTitle title={tr("Drawdown")} help={tr("Hoe ver je onder je eigen hoogste punt hebt gezeten.")} tag={tag} />
           <LineChart xs={dates} xFormat={shortDate} yFormat={fmtAxis} series={[{ name: "Drawdown", color: COLORS.red, values: s.series.map((x) => -x.dd), area: true }]} />
@@ -240,6 +263,12 @@ export function StatsView({ ctx, settings }) {
             </div>
           </div>
         </Card>
+      ),
+    },
+    streaks: {
+      label: "Reeksen",
+      size: "chart",
+      render: () => (
         <Card>
           <CardTitle title={tr("Reeksen")} help={tr("Hoe lang je series winst en verlies waren.")} tag={tag} />
           {s.streaks.histogram.length === 0 ? (
@@ -278,8 +307,12 @@ export function StatsView({ ctx, settings }) {
             </>
           )}
         </Card>
-      </div>
-
+      ),
+    },
+    figures: {
+      label: "Jouw statistieken",
+      size: "full",
+      render: () => (
       <Card>
         <CardTitle title={tr("Jouw statistieken")} help={tr("Alles in één overzicht, in de gekozen eenheid.")} tag={tag} />
         <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-x-6 gap-y-5">
@@ -331,14 +364,54 @@ export function StatsView({ ctx, settings }) {
           </Section>
         </div>
       </Card>
-
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
+      ),
+    },
+    byWeekday: {
+      label: "Per weekdag",
+      size: "chart",
+      render: () => (
         <GroupCard title={tr("Per weekdag")} help={tr("Hoe elke weekdag je behandelt.")} tag={tag} rows={s.byWeekday} unit={unit} labelOf={(k) => weekdayShort2(k)} />
+      ),
+    },
+    byHour: {
+      label: "Per uur",
+      size: "chart",
+      render: () => (
         <GroupCard title={tr("Per uur")} help={tr("Hoe elk deel van de sessie je behandelt (uur waarop je opende).")} tag={tag} rows={s.byHour} unit={unit} labelOf={(k) => `${k}:00`} />
+      ),
+    },
+    byContract: {
+      label: "Per contract",
+      size: "chart",
+      render: () => (
         <GroupCard title={tr("Per contract")} help={tr("Netto resultaat per markt.")} tag={tag} rows={s.byContract} unit={unit} labelOf={(k) => tr(k)} />
+      ),
+    },
+    bySide: {
+      label: "Long of short?",
+      size: "chart",
+      render: () => (
         <GroupCard title={tr("Long of short?")} help={tr("Of één richting stilletjes de andere draagt.")} tag={tag} rows={s.bySide} unit={unit} labelOf={(k) => tr(k)} />
+      ),
+    },
+    byMood: {
+      label: "Per emotionele toestand",
+      size: "chart",
+      render: () => (
         <GroupCard title={tr("Per emotionele toestand")} help={tr("Hoe je trades uitpakken per stemming die je vooraf aanvinkte.")} tag={tag} rows={s.byMood} unit={unit} labelOf={(k) => tr(k)} emptyText={tr("Vink bij je trades een emotie aan om dit te zien.")} />
+      ),
+    },
+    bySetup: {
+      label: "Per setup",
+      size: "chart",
+      render: () => (
         <GroupCard title={tr("Per setup")} help={tr("Welke setups werken.")} tag={tag} rows={s.bySetup} unit={unit} labelOf={(k) => tr(k)} />
+      ),
+    },
+    newsDays: {
+      label: "Op nieuwsdagen",
+      size: "chart",
+      render: () => (
         <GroupCard
           title={tr("Op nieuwsdagen")}
           help={tr("Hoe de grote geplande nieuwsdagen je behandelen. Een trade telt mee voor elke publicatie van die dag.")}
@@ -348,9 +421,12 @@ export function StatsView({ ctx, settings }) {
           labelOf={newsShort}
           emptyText={tr("Je hebt nog geen trades op een dag met geplande nieuwsberichten.")}
         />
-      </div>
-
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
+      ),
+    },
+    target: {
+      label: "Tijd tot doel",
+      size: "chart",
+      render: () => (
         <Card>
           <CardTitle title={tr("Tijd tot doel")} help={tr("Wanneer het tempo van je eigen record een dollardoel zou bereiken (samengestelde groei per marktdag).")} tag={tr("ALLE TIJD")} />
           <div className="flex flex-wrap items-center gap-2 mb-3">
@@ -388,7 +464,12 @@ export function StatsView({ ctx, settings }) {
             </>
           )}
         </Card>
-
+      ),
+    },
+    growth: {
+      label: "Effectieve groeisnelheid",
+      size: "chart",
+      render: () => (
         <Card>
           <CardTitle title={tr("Effectieve groeisnelheid")} help={tr("Het samengestelde tempo van je record per marktdag, doorgetrokken.")} tag={tr("ALLE TIJD")} />
           <div className="mb-3">
@@ -410,8 +491,13 @@ export function StatsView({ ctx, settings }) {
             </>
           )}
         </Card>
-
-        <Card className="lg:col-span-2">
+      ),
+    },
+    monteCarlo: {
+      label: "Monte Carlo",
+      size: "full",
+      render: () => (
+        <Card>
           <CardTitle title={tr("Monte Carlo")} help={tr("Waar handelen zoals dit toe leidt, en hoeveel daarvan volgorde-geluk is.")} tag={tag} />
           {mc ? (
             <FanChart mc={mc} />
@@ -421,7 +507,12 @@ export function StatsView({ ctx, settings }) {
             </p>
           )}
         </Card>
-
+      ),
+    },
+    ruin: {
+      label: "Kans op ruïne",
+      size: "chart",
+      render: () => (
         <Card>
           <CardTitle title={tr("Kans op ruïne")} help={tr("De kans dat een reeks van 100 trades (getrokken uit je eigen resultaten) je een bepaald deel van je startsaldo kost.")} tag={tag} />
           {ruin ? (
@@ -447,7 +538,12 @@ export function StatsView({ ctx, settings }) {
             </p>
           )}
         </Card>
-
+      ),
+    },
+    kelly: {
+      label: "Kelly-criterium",
+      size: "chart",
+      render: () => (
         <Card>
           <CardTitle title={tr("Kelly-criterium")} help={tr("Het risico per trade dat je winrate en uitbetaling zouden kunnen dragen, naast wat je plant.")} tag={tag} />
           {k == null ? (
@@ -470,8 +566,13 @@ export function StatsView({ ctx, settings }) {
             </div>
           )}
         </Card>
-      </div>
+      ),
+    },
+  };
 
+  return (
+    <div className="flex flex-col gap-4">
+      <WidgetGrid kit={STATS_LAYOUTS} widgets={widgets} spans={SPANS} gridClass="grid grid-cols-1 lg:grid-cols-6 gap-3" />
     </div>
   );
 }

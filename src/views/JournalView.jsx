@@ -1,5 +1,4 @@
-import React, { useState } from "react";
-import { ArrowDown, ArrowUp, EyeOff } from "lucide-react";
+import React from "react";
 import { COLORS, MONO, PERIODS, toneColor } from "../theme.js";
 import { PnlCalendar, YearOverview } from "../components/PnlCalendar.jsx";
 import { axisValue, dateOnlyLabel, duration, fixed, money, pct, shortDate, unitValue } from "../lib/format.js";
@@ -8,8 +7,8 @@ import { newsBetween, newsName } from "../lib/news.js";
 import { BarChart, DotPlot, Donut, HBars, LineChart } from "../ui/charts.jsx";
 import { Card, CardTitle, Empty } from "../ui/primitives.jsx";
 import { tr } from "../i18n.js";
-import { LayoutBar } from "../components/LayoutBar.jsx";
-import { DEFAULT_ORDER, addWidget, hideWidget, loadState, moveWidget, orderFor, persistState, removeLayout, saveAs } from "../lib/layout.js";
+import { WidgetGrid } from "../components/WidgetGrid.jsx";
+import { JOURNAL_LAYOUTS } from "../lib/layout.js";
 
 export function periodTag(period) {
   return tr(PERIODS.find((p) => p.value === period)?.label || "").toUpperCase();
@@ -484,85 +483,13 @@ export function JournalView({ ctx, settings, onPickDay, onOpenTrade, calendarCur
     setCalendarCursor,
   });
 
-  const [layouts, setLayouts] = useState(loadState);
-  const [draft, setDraft] = useState(null); // null = niet aan het indelen; anders de werkvolgorde
-  const arranging = draft !== null;
-  const order = arranging ? draft : orderFor(layouts);
-  const commit = (next) => {
-    setLayouts(next);
-    persistState(next);
-  };
-
   return (
     <div className="flex flex-col gap-4">
-      <LayoutBar
-        layouts={layouts}
-        arranging={arranging}
-        draft={draft}
-        labelOf={(id) => tr(widgets[id].label)}
-        onPick={(name) => commit({ ...layouts, active: name })}
-        onStart={() => setDraft(orderFor(layouts))}
-        onCancel={() => setDraft(null)}
-        onSave={(name) => {
-          commit(saveAs(layouts, name, draft));
-          setDraft(null);
-        }}
-        onDelete={(name) => commit(removeLayout(layouts, name))}
-        onAdd={(id) => setDraft(addWidget(draft, id))}
-        onReset={() => setDraft([...DEFAULT_ORDER])}
-      />
-
-      {order.length === 0 && <Empty>{tr("Alle widgets zijn verborgen. Kies ‘Indelen / widget toevoegen’ om ze terug te zetten.")}</Empty>}
-
-      <div className="grid grid-cols-2 md:grid-cols-6 gap-3">
-        {order.map((id, i) => {
-          const w = widgets[id];
-          const inner = <div className="flex flex-1 flex-col [&>*]:flex-1">{w.render()}</div>;
-          return (
-            <div key={id} className={`flex flex-col ${SPAN[w.size]} ${arranging ? "rounded-xl p-1.5" : ""}`} style={arranging ? { border: `1px dashed ${COLORS.cardBorder}` } : undefined}>
-              {arranging && (
-                <div className="flex items-center justify-between gap-1 pb-1.5">
-                  <span className="text-[10px] uppercase tracking-widest truncate" style={{ color: COLORS.textMuted, fontFamily: MONO }}>
-                    {tr(w.label)}
-                  </span>
-                  <span className="flex gap-1 shrink-0">
-                    <IconBtn label={tr("Omhoog")} disabled={i === 0} onClick={() => setDraft(moveWidget(draft, id, -1))}>
-                      <ArrowUp size={13} />
-                    </IconBtn>
-                    <IconBtn label={tr("Omlaag")} disabled={i === order.length - 1} onClick={() => setDraft(moveWidget(draft, id, 1))}>
-                      <ArrowDown size={13} />
-                    </IconBtn>
-                    <IconBtn label={tr("Verbergen")} onClick={() => setDraft(hideWidget(draft, id))}>
-                      <EyeOff size={13} />
-                    </IconBtn>
-                  </span>
-                </div>
-              )}
-              {inner}
-            </div>
-          );
-        })}
-      </div>
+      <WidgetGrid kit={JOURNAL_LAYOUTS} widgets={widgets} spans={SPAN} gridClass="grid grid-cols-2 md:grid-cols-6 gap-3" />
       <p className="text-[10px] text-center" style={{ color: COLORS.textMuted, fontFamily: MONO }}>
         {tr("Tijden in {tz} · vandaag {today}", { tz, today })}
       </p>
     </div>
-  );
-}
-
-function IconBtn({ label, onClick, disabled, children }) {
-  return (
-    <button
-      type="button"
-      onClick={onClick}
-      disabled={disabled}
-      aria-label={label}
-      title={label}
-      className="rounded-md p-1.5 disabled:opacity-30"
-      style={{ background: COLORS.inputBg, border: `1px solid ${COLORS.cardBorder}`, color: COLORS.text }}
-    >
-      {children}
-    </button>
   );
 }
 

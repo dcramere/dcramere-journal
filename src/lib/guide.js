@@ -60,6 +60,8 @@ export const GUIDE_SECTIONS = [
       T("• <b>Jaaroverzicht en maandkalender</b>: elke dag in groen of rood. Wissel met de knoppen tussen <b>P&L, Trades, Win % en Gem. W/V</b>. Klik een dag om zijn trades te zien."),
       T("• <b>Recente trades</b> en <b>Emotie en resultaat</b> (gemiddeld resultaat per emotie)."),
       T("• <b>Grafieken</b>: win %, winst-tegenover-verliesverhouding, expectancy, drawdown (hoe ver je onder je hoogste punt zat), positiegrootte, netto dagresultaat, resultaat per houdtijd en per tijdstip, en je cumulatieve resultaat. Beweeg of tik op een grafiek voor de waarden."),
+      T("• <b>Het vraagteken</b> naast een kerncijfer legt uit wat het getal betekent, met jouw eigen bedragen erin. De kleur volgt je totale resultaat."),
+      T("• <b>Je dashboard aanpassen</b>: kies <b>Indelen / widget toevoegen</b> boven de kerncijfers. Verplaats widgets met de pijltjes, verberg wat je niet nodig hebt, zet het terug met het plusje en <b>sla je indeling op onder een naam</b>. Daarna wissel je met één klik tussen je indelingen. Dit geldt alleen in je eigen browser."),
     ],
   },
   {

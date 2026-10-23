@@ -5,6 +5,7 @@ import { importCsv, exportCsv, parseMoney } from "../src/lib/csv.js";
 import { wallToEpoch, partsInTz, marketDaysBetween } from "../src/lib/tz.js";
 import { rootSymbol, pointValue } from "../src/lib/contracts.js";
 import { buildReport, isoWeekKey, lastCompletedPeriods, previousPeriod } from "../src/lib/report.js";
+import * as L from "../src/lib/layout.js";
 
 let fails = 0;
 const eq = (name, got, want, tol = 0.005) => {
@@ -195,6 +196,20 @@ const tiny = buildReport({ trades: wkTrades.slice(0, 2), accounts: [racc], tz: T
 eq("report: a tiny sample is flagged as such", tiny.neutral.some((i) => i.id === "low_sample"), true);
 const winWeek = buildReport({ trades: wkTrades.filter((t) => ["a1", "a2", "a3", "a8"].includes(t.id)), accounts: [racc], tz: TZ, kind: "week", start: "2026-09-28", end: "2026-10-04" });
 eq("report: a good week has no improvement but a keep-going focus", winWeek.improve.length === 0 && winWeek.focus.id === "keep_going", true, JSON.stringify(winWeek.improve.map((i) => i.id)));
+
+// Dashboard-indeling
+eq("layout: default shows every widget", L.orderFor(L.emptyState()).length, L.WIDGET_IDS.length);
+eq("layout: moving down swaps with the next one", L.moveWidget(["a", "b", "c"], "a", 1).join(), "b,a,c");
+eq("layout: moving past the end changes nothing", L.moveWidget(["a", "b"], "b", 1).join(), "a,b");
+eq("layout: hiding removes a widget and lists it as hidden", L.hiddenOf(L.hideWidget(L.DEFAULT_ORDER, "cumulative")).join(), "cumulative");
+eq("layout: adding appends once", L.addWidget(L.hideWidget(L.DEFAULT_ORDER, "mood"), "mood").at(-1), "mood");
+eq("layout: unknown widget ids are dropped", L.cleanOrder(["balance", "nope", "balance", "year"]).join(), "balance,year");
+const ls = L.saveAs(L.emptyState(), "  Rustig   dag ", ["year", "balance", "x"]);
+eq("layout: saving makes it active with a cleaned name", ls.active, "Rustig dag");
+eq("layout: saved order is kept and cleaned", L.orderFor(ls).join(), "year,balance");
+eq("layout: the Default name cannot be overwritten", L.saveAs(L.emptyState(), "Default", ["year"]).active, "Default");
+eq("layout: deleting the active layout falls back to Default", L.removeLayout(ls, "Rustig dag").active, "Default");
+eq("layout: broken storage gives a safe default", L.normalize({ active: 5, saved: { "": ["year"], a: "oops" } }).active, "Default");
 
 console.log(fails ? `\n${fails} FAILED` : "\nALL PASSED");
 process.exit(fails ? 1 : 0);

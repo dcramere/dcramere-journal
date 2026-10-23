@@ -3,7 +3,8 @@ import { ArrowDown, ArrowUp, EyeOff } from "lucide-react";
 import { COLORS, MONO, PERIODS, toneColor } from "../theme.js";
 import { PnlCalendar, YearOverview } from "../components/PnlCalendar.jsx";
 import { axisValue, dateOnlyLabel, duration, fixed, money, pct, shortDate, unitValue } from "../lib/format.js";
-import { parseDate } from "../lib/tz.js";
+import { addDays, parseDate } from "../lib/tz.js";
+import { newsBetween, newsName } from "../lib/news.js";
 import { BarChart, DotPlot, Donut, HBars, LineChart } from "../ui/charts.jsx";
 import { Card, CardTitle, Empty } from "../ui/primitives.jsx";
 import { tr } from "../i18n.js";
@@ -63,7 +64,7 @@ function holdTicks(maxMin) {
 // Elke widget: id (zie lib/layout.js), label voor de lijst "voeg een widget toe", breedte en weergave.
 // `full` = hele rij, `kpi` = klein kerncijfer, anders een grafiekkaart.
 function buildWidgets(env) {
-  const { stats, unit, balance, tag, dates, xFmt, fmtAxis, recent, moodRows, netTone, maxHold, hMin, hMax, dd, onPickDay, onOpenTrade, setCalendarCursor, calendarCursor } = env;
+  const { stats, unit, balance, tag, today, dates, xFmt, fmtAxis, recent, moodRows, netTone, maxHold, hMin, hMax, dd, onPickDay, onOpenTrade, setCalendarCursor, calendarCursor } = env;
   const money2 = (v) => unitValue(v, unit, { sign: true });
   return {
     balance: {
@@ -219,6 +220,35 @@ function buildWidgets(env) {
           )}
         </Card>
       ),
+    },
+    news: {
+      label: "Nieuws vooruit",
+      size: "chart",
+      render: () => {
+        const week = newsBetween(today, addDays(today, 6));
+        const events = week.length ? week : newsBetween(today, addDays(today, 20));
+        return (
+          <Card>
+            <CardTitle title={tr("Nieuws vooruit")} help={tr("De geplande Amerikaanse publicaties van de komende dagen, de eerstvolgende bovenaan. Tijden in New York (ET).")} />
+            <p className="text-xs mb-2" style={{ color: COLORS.textMuted }}>
+              {events.length === 0 ? tr("Geen geplande nieuwsberichten in de kalender.") : week.length ? tr("De komende 7 dagen.") : tr("Een rustige week. Dit komt daarna.")}
+            </p>
+            <div className="flex flex-col">
+              {events.slice(0, 8).map((e) => (
+                <div key={`${e.date}-${e.id}`} className="flex items-center justify-between gap-2 py-1.5 text-xs" style={{ borderBottom: `1px solid ${COLORS.grid}` }}>
+                  <span className="shrink-0 w-14" style={{ color: COLORS.textMuted, fontFamily: MONO }}>
+                    {shortDate(e.date)}
+                  </span>
+                  <span className="flex-1 truncate font-semibold" style={{ color: COLORS.text }}>
+                    {newsName(e.id)}
+                  </span>
+                  <span style={{ color: COLORS.gold, fontFamily: MONO }}>{e.time}</span>
+                </div>
+              ))}
+            </div>
+          </Card>
+        );
+      },
     },
     mood: {
       label: "Emotie & resultaat",
@@ -437,6 +467,7 @@ export function JournalView({ ctx, settings, onPickDay, onOpenTrade, calendarCur
     unit,
     balance,
     tag,
+    today,
     dates,
     xFmt: (d) => shortDate(d),
     fmtAxis: (v) => axisValue(v, unit),

@@ -61,6 +61,7 @@ export const GUIDE_SECTIONS = [
       T("• <b>Recente trades</b> en <b>Emotie en resultaat</b> (gemiddeld resultaat per emotie)."),
       T("• <b>Grafieken</b>: win %, winst-tegenover-verliesverhouding, expectancy, drawdown (hoe ver je onder je hoogste punt zat), positiegrootte, netto dagresultaat, resultaat per houdtijd en per tijdstip, en je cumulatieve resultaat. Beweeg of tik op een grafiek voor de waarden."),
       T("• <b>Het vraagteken</b> naast een kerncijfer legt uit wat het getal betekent, met jouw eigen bedragen erin. De kleur volgt je totale resultaat."),
+      T("• <b>Nieuws</b>: een goud puntje in de kalender betekent dat die dag Amerikaans nieuws gepland staat (CPI, banenrapport, Fed-besluit en meer). Beweeg over de dag voor de naam. De kaart <b>Nieuws vooruit</b> toont de komende 7 dagen, tijden in New York."),
       T("• <b>Je dashboard aanpassen</b>: kies <b>Indelen / widget toevoegen</b> boven de kerncijfers. Verplaats widgets met de pijltjes, verberg wat je niet nodig hebt, zet het terug met het plusje en <b>sla je indeling op onder een naam</b>. Daarna wissel je met één klik tussen je indelingen. Dit geldt alleen in je eigen browser."),
     ],
   },
@@ -69,6 +70,7 @@ export const GUIDE_SECTIONS = [
     title: T("Tabblad Trades"),
     body: [
       T("• Alle trades per dag, met het resultaat per dag. <b>Klik een trade</b> voor details, je les en je screenshot."),
+      T("• Klik een trade voor ook <b>instap en uitstap, tijden, duur en fills</b>. Een trade die over meerdere dagen liep toont <b>‘dagen later’</b>."),
       T("• <b>Bewerken</b> en <b>Verwijderen</b> staan in de details van een trade."),
       T("• <b>Filter deze trades</b>: zoek op symbool of notitie, of filter op richting, uitkomst, setup of emotie. Een dag uit de kalender kiezen filtert ook. <b>Wis filters</b> zet alles terug."),
       T("• <b>Download CSV</b> (onderaan) bewaart al je trades als spreadsheet."),
@@ -82,6 +84,7 @@ export const GUIDE_SECTIONS = [
       T("• <b>Reeksen</b>: je langste winst- en verliesreeksen."),
       T("• <b>Jouw statistieken</b>: resultaat, dagen, de trades zelf, maanden, reeksen en drawdown in één overzicht."),
       T("• <b>Uitsplitsingen</b> per weekdag, uur, contract, richting, emotie en setup. Wissel de weergave tussen <b>Win %, Netto, Gem. winst, Gem. verlies, Gem. duur</b> en <b>Overzicht</b>."),
+      T("• <b>Op nieuwsdagen</b>: hoe je trades uitpakken op dagen met geplande nieuwsberichten, per soort bericht."),
       T("• <b>Tijd tot doel</b> en <b>Effectieve groeisnelheid</b>: wanneer je een dollardoel haalt als je tempo gelijk blijft. Het is een hypothese, geen voorspelling."),
       T("• <b>Monte Carlo, Kans op ruïne</b> en <b>Kelly-criterium</b> verschijnen pas vanaf 100 trades. Daarvoor is de steekproef te klein om iets te zeggen."),
     ],

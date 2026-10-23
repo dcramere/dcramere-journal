@@ -5,6 +5,7 @@ import { fixed, monthLong, monthShort, pct, unitValue, weekdayShort } from "../l
 import { monthMatrix } from "../lib/tz.js";
 import { Card, Segmented } from "../ui/primitives.jsx";
 import { tr } from "../i18n.js";
+import { newsName, newsOn } from "../lib/news.js";
 
 const METRICS = [
   { value: "pnl", label: "P&L" },
@@ -98,10 +99,11 @@ export function PnlCalendar({ stats, unit, cursor, setCursor, onPickDay }) {
           const weekDays = week.map((d) => (d ? byDate.get(d) : null)).filter(Boolean);
           const weekNet = weekDays.reduce((s, d) => s + d.value, 0);
           const cells = week.map((date, di) => {
-            if (!date) return <div key={`e${wi}-${di}`} />; const day = byDate.get(date); const c = day ? cell(day, metric, unit) : null; const st = c ? toneStyle(metric, c.tone, scale) : null; const num = Number(date.slice(8)); const content = (
+            if (!date) return <div key={`e${wi}-${di}`} />; const day = byDate.get(date); const c = day ? cell(day, metric, unit) : null; const st = c ? toneStyle(metric, c.tone, scale) : null; const num = Number(date.slice(8)); const news = newsOn(date); const newsText = news.map(newsName).join(" · "); const content = (
               <>
-                <span className="text-[9px] sm:text-[10px]" style={{ color: COLORS.textMuted, fontFamily: MONO }}>
+                <span className="flex items-center justify-between text-[9px] sm:text-[10px]" style={{ color: COLORS.textMuted, fontFamily: MONO }}>
                   {num}
+                  {news.length > 0 && <span aria-hidden="true" className="rounded-full" style={{ width: 6, height: 6, background: COLORS.gold }} />}
                 </span>
                 {c && (
                   <span className="mt-auto text-right leading-tight">
@@ -129,12 +131,13 @@ export function PnlCalendar({ stats, unit, cursor, setCursor, onPickDay }) {
                 onClick={() => onPickDay(date)}
                 className="rounded-md p-1 sm:p-1.5 flex flex-col text-left"
                 style={base}
-                aria-label={`${date}: ${c.text}`}
+                aria-label={`${date}: ${c.text}${newsText ? ` · ${newsText}` : ""}`}
+                title={newsText || undefined}
               >
                 {content}
               </button>
             ) : (
-              <div key={date} className="rounded-md p-1 sm:p-1.5 flex flex-col" style={base}>
+              <div key={date} className="rounded-md p-1 sm:p-1.5 flex flex-col" style={base} title={newsText || undefined}>
                 {content}
               </div>
             );
@@ -164,6 +167,10 @@ export function PnlCalendar({ stats, unit, cursor, setCursor, onPickDay }) {
           return [...cells, weekCell];
         })}
       </div>
+      <p className="mt-2 flex items-center gap-1.5 text-[10px]" style={{ color: COLORS.textMuted, fontFamily: MONO }}>
+        <span aria-hidden="true" className="rounded-full" style={{ width: 6, height: 6, background: COLORS.gold }} />
+        {tr("Dag met geplande nieuwsberichten. Beweeg over de dag voor de details.")}
+      </p>
     </Card>
   );
 }

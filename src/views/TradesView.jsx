@@ -3,11 +3,25 @@ import { ChevronDown, Download, Pencil, Plus, Trash2, X } from "lucide-react";
 import { COLORS, MONO, MOODS, SETUPS, toneColor } from "../theme.js";
 import { getShot } from "../shots.js";
 import { exportCsv } from "../lib/csv.js";
-import { dayLabel, duration, money, timeLabel, unitValue } from "../lib/format.js";
+import { dayLabel, duration, money, shortDate, timeLabel, unitValue } from "../lib/format.js";
 import { Button, Card, Empty, Select } from "../ui/primitives.jsx";
 import { tr } from "../i18n.js";
+import { partsInTz } from "../lib/tz.js";
 
-function TradeDetail({ trade, account, unit, onEdit, onDelete, readOnly }) {
+// Aantal kalenderdagen tussen openen en sluiten (in de gekozen tijdzone): 0 voor een trade binnen één dag.
+function daysHeld(t, tz) {
+  const a = partsInTz(t.openedAt, tz);
+  const b = partsInTz(t.closedAt, tz);
+  return Math.round((Date.UTC(b.y, b.mo - 1, b.d) - Date.UTC(a.y, a.mo - 1, a.d)) / 86400000);
+}
+
+// Alleen de tijd, of datum en tijd wanneer de trade over meerdere dagen liep.
+function whenLabel(ms, trade, tz) {
+  const time = timeLabel(ms, tz);
+  return daysHeld(trade, tz) > 0 ? `${shortDate(partsInTz(ms, tz).date)} ${time}` : time;
+}
+
+function TradeDetail({ trade, account, unit, tz, onEdit, onDelete, readOnly }) {
   const [shot, setShot] = useState(null);
   const [shotState, setShotState] = useState(trade.hasScreenshot ? "loading" : "none");
 
@@ -34,11 +48,17 @@ function TradeDetail({ trade, account, unit, onEdit, onDelete, readOnly }) {
   ); return (
     <div className="px-3 pb-3 pt-1 flex flex-col gap-3" style={{ background: COLORS.cardHi }}>
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+        {cell(tr("Resultaat $"), money(trade.v.$, { sign: true }), toneColor(trade.v.$))}
+        {cell(tr("Instap → uitstap"), trade.entryPrice != null || trade.exitPrice != null ? `${trade.entryPrice ?? "—"} → ${trade.exitPrice ?? "—"}` : "—")}
+        {cell(tr("Contracten"), trade.qty)}
+        {cell(tr("Geopend"), whenLabel(trade.openedAt, trade, tz))}
+        {cell(tr("Gesloten"), whenLabel(trade.closedAt, trade, tz))}
+        {cell(tr("Duur"), duration(trade.closedAt - trade.openedAt))}
+        {cell(tr("Fills"), trade.fills > 0 ? trade.fills : "—")}
         {cell(tr("Account"), account ? account.name : "—")}
         {cell(tr("Setup"), trade.setup ? tr(trade.setup) : "—")}
         {cell(tr("Emotie"), trade.mood ? tr(trade.mood) : "—")}
         {cell(tr("Kosten"), money(trade.fees || 0))}
-        {cell(tr("Resultaat $"), money(trade.v.$, { sign: true }), toneColor(trade.v.$))}
         {cell(tr("Resultaat %"), trade.v["%"] == null ? "—" : unitValue(trade.v["%"], "%", { sign: true }), toneColor(trade.v["%"]))}
         {cell(tr("Resultaat R"), trade.v.R == null ? "—" : unitValue(trade.v.R, "R", { sign: true }), toneColor(trade.v.R))}
         {cell(tr("Saldo erna"), money(trade.balAfter))}
@@ -250,7 +270,10 @@ export function TradesView({ ctx, accounts, filters, setFilters, focusId, onEdit
                         <span className="block">
                           {timeLabel(t.openedAt, tz)}–{timeLabel(t.closedAt, tz)}
                         </span>
-                        <span className="block text-[10px]">{duration(t.closedAt - t.openedAt)}</span>
+                        <span className="block text-[10px]">
+                          {duration(t.closedAt - t.openedAt)}
+                          {daysHeld(t, tz) > 0 ? ` · ${tr(daysHeld(t, tz) === 1 ? "{n} dag later" : "{n} dagen later", { n: daysHeld(t, tz) })}` : ""}
+                        </span>
                       </span>
                       <span className="min-w-0">
                         <span className="font-semibold" style={{ color: COLORS.text }}>
@@ -267,7 +290,7 @@ export function TradesView({ ctx, accounts, filters, setFilters, focusId, onEdit
                         {unitValue(v, unit, { sign: true })}
                       </span>
                     </button>
-                    {isOpen && <TradeDetail trade={t} account={accountById.get(t.accountId)} unit={unit} onEdit={onEdit} onDelete={onDelete} readOnly={readOnly} />}
+                    {isOpen && <TradeDetail trade={t} account={accountById.get(t.accountId)} unit={unit} tz={tz} onEdit={onEdit} onDelete={onDelete} readOnly={readOnly} />}
                   </div>
                 );
               })}

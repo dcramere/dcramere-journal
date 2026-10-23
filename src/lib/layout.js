@@ -11,6 +11,7 @@ export const WIDGET_IDS = [
   "year",
   "calendar",
   "recent",
+  "news",
   "mood",
   "winLine",
   "ratioLine",

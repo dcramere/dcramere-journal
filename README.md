@@ -210,6 +210,12 @@ npm test           # rekenlogica, API-tests en vertaalcontrole
 De lokale API gebruikt setup-code `dev-setup-token` en bewaart data in `.dev-db/` (niet in git). / The local API uses setup code
 `dev-setup-token` and stores data in `.dev-db/` (git-ignored).
 
+## Nieuwskalender / News calendar
+
+**NL** De gouden puntjes in de kalender, de kaart *Nieuws vooruit* en de statistiek *Op nieuwsdagen* komen uit `src/lib/news.js`. Dat zijn de officiële data van BLS (CPI, PPI, banenrapport), de Federal Reserve (rentebesluit en notulen), BEA (GDP, PCE) en Census (retail sales); ISM volgt een vaste regel (1e en 3e werkdag). De lijst loopt tot en met eind 2027 en staat in de code, zonder koppeling met een externe dienst. Vul hem een of twee keer per jaar aan: voeg de nieuwe datums toe aan de lijsten bovenin en draai `npm test`. GDP en PCE voor 2027 en de retail sales van vóór oktober 2026 ontbreken nog.
+
+**EN** The gold dots in the calendar, the *News ahead* card and the *On news days* statistic come from `src/lib/news.js`. It holds the official dates from BLS (CPI, PPI, jobs report), the Federal Reserve (rate decision and minutes), BEA (GDP, PCE) and Census (retail sales); ISM follows a fixed rule (1st and 3rd business day). The list runs through the end of 2027 and lives in the code, with no external service behind it. Top it up once or twice a year: add the new dates to the lists at the top and run `npm test`. GDP and PCE for 2027 and retail sales before October 2026 are not in yet.
+
 ## Lokaal draaien
 
 ```bash

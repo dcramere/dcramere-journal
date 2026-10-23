@@ -254,7 +254,7 @@ export function LineChart({
 
 // ---------- Staafgrafiek ----------
 
-export function BarChart({ items, yFormat, height = 190, emptyText = "Nog geen data" }) {
+export function BarChart({ items, yFormat, height = 190, emptyText = "Nog geen data" , maxLabels = 6 }) {
   const [wrapRef, W] = useWidth();
   const [hover, setHover] = useState(null);
   const n = items.length;
@@ -300,7 +300,7 @@ export function BarChart({ items, yFormat, height = 190, emptyText = "Nog geen d
               />
             );
           })}
-          {pickIndexes(n, 6).map((i, k, arr) => (
+          {pickIndexes(n, maxLabels).map((i, k, arr) => (
             <text
               key={i}
               x={padL + slot * i + slot / 2}

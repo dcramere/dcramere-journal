@@ -24,6 +24,7 @@ import {
 import { BarChart, LineChart, YearGrid } from "../ui/charts.jsx";
 import { Card, CardTitle, Empty, Segmented, Select } from "../ui/primitives.jsx";
 import { periodTag } from "./JournalView.jsx";
+import { newsDayStats, newsShort } from "../lib/news.js";
 import { tr } from "../i18n.js";
 
 function StatRow({ label, value, sub, color }) {
@@ -113,6 +114,7 @@ function GroupCard({ title, help, tag, rows, unit, labelOf, emptyText }) {
       ) : (
         <BarChart
           yFormat={fmt}
+          maxLabels={Math.min(rows.length, 9)}
           items={rows.map((r) => ({
             key: r.key,
             label: labelOf(r.key),
@@ -175,6 +177,7 @@ export function StatsView({ ctx, settings }) {
   const days = growth ? daysToTarget(growth, target) : null;
   const projection = growth ? projectBalance(growth, Number(horizon)) : null;
 
+  const newsRows = useMemo(() => newsDayStats(scoped, unit), [scoped, unit]);
   const dollars = useMemo(() => scoped.map((t) => t.v.$), [scoped]);
   const mc = useMemo(() => monteCarlo(dollars), [dollars]);
   const startBal = scopedAccounts.reduce((s, a) => s + (Number(a.startBalance) || 0), 0);
@@ -336,6 +339,15 @@ export function StatsView({ ctx, settings }) {
         <GroupCard title={tr("Long of short?")} help={tr("Of één richting stilletjes de andere draagt.")} tag={tag} rows={s.bySide} unit={unit} labelOf={(k) => tr(k)} />
         <GroupCard title={tr("Per emotionele toestand")} help={tr("Hoe je trades uitpakken per stemming die je vooraf aanvinkte.")} tag={tag} rows={s.byMood} unit={unit} labelOf={(k) => tr(k)} emptyText={tr("Vink bij je trades een emotie aan om dit te zien.")} />
         <GroupCard title={tr("Per setup")} help={tr("Welke setups werken.")} tag={tag} rows={s.bySetup} unit={unit} labelOf={(k) => tr(k)} />
+        <GroupCard
+          title={tr("Op nieuwsdagen")}
+          help={tr("Hoe de grote geplande nieuwsdagen je behandelen. Een trade telt mee voor elke publicatie van die dag.")}
+          tag={tag}
+          rows={newsRows}
+          unit={unit}
+          labelOf={newsShort}
+          emptyText={tr("Je hebt nog geen trades op een dag met geplande nieuwsberichten.")}
+        />
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">

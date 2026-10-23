@@ -6,6 +6,7 @@ import { wallToEpoch, partsInTz, marketDaysBetween } from "../src/lib/tz.js";
 import { rootSymbol, pointValue } from "../src/lib/contracts.js";
 import { buildReport, isoWeekKey, lastCompletedPeriods, previousPeriod } from "../src/lib/report.js";
 import * as L from "../src/lib/layout.js";
+import * as N from "../src/lib/news.js";
 
 let fails = 0;
 const eq = (name, got, want, tol = 0.005) => {
@@ -210,6 +211,25 @@ eq("layout: saved order is kept and cleaned", L.orderFor(ls).join(), "year,balan
 eq("layout: the Default name cannot be overwritten", L.saveAs(L.emptyState(), "Default", ["year"]).active, "Default");
 eq("layout: deleting the active layout falls back to Default", L.removeLayout(ls, "Rustig dag").active, "Default");
 eq("layout: broken storage gives a safe default", L.normalize({ active: 5, saved: { "": ["year"], a: "oops" } }).active, "Default");
+
+// Nieuwskalender: oktober 2026 moet overeenkomen met wat trade1348 toont.
+const octNews = Object.fromEntries(N.newsBetween("2026-10-01", "2026-10-31").reduce((m, e) => (m.set(e.date, [...(m.get(e.date) || []), e.id]), m), new Map()));
+eq("news: ISM Manufacturing on the first business day", octNews["2026-10-01"].join(), "ismMfg");
+eq("news: jobs report", octNews["2026-10-02"].join(), "jobs");
+eq("news: ISM Services on the third business day", octNews["2026-10-05"].join(), "ismSvc");
+eq("news: Fed minutes three weeks after the decision", octNews["2026-10-07"].join(), "minutes");
+eq("news: CPI", octNews["2026-10-14"].join(), "cpi");
+eq("news: PPI and retail sales share a day", octNews["2026-10-15"].join(), "ppi,retail");
+eq("news: Fed decision", octNews["2026-10-28"].join(), "fomc");
+eq("news: GDP and PCE share a day", octNews["2026-10-29"].join(), "gdpAdv,pce");
+eq("news: a quiet day has nothing", N.newsOn("2026-10-12").length, 0);
+eq("news: ISM skips a holiday", N.newsOn("2027-01-04").join(), "ismMfg");
+eq("news: range is ordered by date then time", N.newsBetween("2026-10-28", "2026-10-29").map((e) => e.id).join(), "fomc,gdpAdv,pce");
+
+const newsTrades = ["2026-10-14", "2026-10-15", "2026-10-15", "2026-10-13"].map((day, i) => ({ id: "n" + i, day, v: { $: i === 1 ? -50 : 100, "%": 0, R: 0 }, openedAt: 0, closedAt: 0, qty: 1 }));
+const newsRows = N.newsDayStats(newsTrades, "$");
+eq("news stats: a trade counts for every release of its day", newsRows.filter((r) => ["ppi", "retail"].includes(r.key)).map((r) => r.trades).join(), "2,2");
+eq("news stats: trades on quiet days are left out", newsRows.reduce((m, r) => m + r.trades, 0), 5);
 
 console.log(fails ? `\n${fails} FAILED` : "\nALL PASSED");
 process.exit(fails ? 1 : 0);

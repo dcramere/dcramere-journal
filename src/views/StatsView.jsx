@@ -19,6 +19,7 @@ import {
   kelly,
   monteCarlo,
   projectBalance,
+  riskBands,
   riskOfRuin,
 } from "../lib/metrics.js";
 import { BarChart, LineChart, YearGrid } from "../ui/charts.jsx";
@@ -175,12 +176,14 @@ export function StatsView({ ctx, settings }) {
   const [targetText, setTargetText] = useState("1000000");
   const [horizon, setHorizon] = useState("1");
   const [ruinPct, setRuinPct] = useState("10");
+  const [bandWidth, setBandWidth] = useState("1");
 
   const growth = useMemo(() => growthStats(accountTrades, scopedAccounts, today), [accountTrades, scopedAccounts, today]);
   const target = targetMode === "double" && growth ? growth.base * 2 : Number(targetText.replace(/[^0-9.]/g, "")) || 0;
   const days = growth ? daysToTarget(growth, target) : null;
   const projection = growth ? projectBalance(growth, Number(horizon)) : null;
 
+  const bands = useMemo(() => riskBands(scoped, unit, Number(bandWidth)), [scoped, unit, bandWidth]);
   const newsRows = useMemo(() => newsDayStats(scoped, unit), [scoped, unit]);
   const dollars = useMemo(() => scoped.map((t) => t.v.$), [scoped]);
   const mc = useMemo(() => monteCarlo(dollars), [dollars]);
@@ -192,7 +195,7 @@ export function StatsView({ ctx, settings }) {
       render: () => (
       <Card>
         <div className="flex items-center justify-between mb-2">
-          <CardTitle title={tr("{year} in één oogopslag", { year })} help={tr("Elke dag van het jaar: groen = winst, rood = verlies, hoe donkerder hoe groter.")} />
+          <CardTitle title={tr("{year} in één oogopslag", { year })} help={tr("Elke dag van het jaar als één blokje: groen is een winstdag, rood een verliesdag, en hoe donkerder, hoe groter het bedrag. Zo zie je in één oogopslag hoe gelijkmatig je resultaat is en of verliezen in clusters komen.")} />
           <div className="flex gap-2 text-xs" style={{ color: COLORS.textMuted }}>
             <button type="button" onClick={() => setYear((y) => y - 1)} aria-label={tr("Vorig jaar")}>‹</button>
             <button type="button" onClick={() => setYear((y) => y + 1)} aria-label={tr("Volgend jaar")}>›</button>
@@ -210,7 +213,7 @@ export function StatsView({ ctx, settings }) {
       size: "chart",
       render: () => (
         <Card>
-          <CardTitle title={tr("Cumulatief resultaat")} help={tr("Elke handelsdag opgeteld. De vorm zegt meer dan het eindpunt.")} tag={tag} />
+          <CardTitle title={tr("Cumulatief resultaat")} help={tr("Je resultaat dag na dag opgeteld. Kijk vooral naar de vorm: een rustig stijgende lijn is gezonder dan een lijn met grote pieken en dalen, ook als beide op hetzelfde punt eindigen.")} tag={tag} />
           <LineChart
             xs={dates}
             xFormat={shortDate}
@@ -225,7 +228,7 @@ export function StatsView({ ctx, settings }) {
       size: "chart",
       render: () => (
         <Card>
-          <CardTitle title={tr("Accountsaldo")} help={tr("Altijd in dollars. Goud: stortingen of opnames.")} tag={tr("ALLE TIJD")} />
+          <CardTitle title={tr("Accountsaldo")} help={tr("Je accountsaldo na elke handelsdag: het startsaldo plus alles wat je verdiende, stortte of opnam. Altijd in dollars, ook als je een andere eenheid hebt gekozen. Een gouden markering is een storting of opname, zodat die je resultaat niet vertekent.")} tag={tr("ALLE TIJD")} />
           <LineChart
             xs={balance.points.map((p) => p.date)}
             xFormat={shortDate}
@@ -246,7 +249,7 @@ export function StatsView({ ctx, settings }) {
       size: "chart",
       render: () => (
         <Card>
-          <CardTitle title={tr("Drawdown")} help={tr("Hoe ver je onder je eigen hoogste punt hebt gezeten.")} tag={tag} />
+          <CardTitle title={tr("Drawdown")} help={tr("Hoe ver je resultaat onder je eigen hoogste punt zat, na elke dag. ‘Diepste’ is je grootste terugval en ‘Langst onder’ is hoe lang je nodig had om weer op een hoogtepunt te komen. Zo meet je wat je record je echt kostte.")} tag={tag} />
           <LineChart xs={dates} xFormat={shortDate} yFormat={fmtAxis} series={[{ name: "Drawdown", color: COLORS.red, values: s.series.map((x) => -x.dd), area: true }]} />
           <div className="grid grid-cols-3 gap-2 mt-2 text-[11px]" style={{ color: COLORS.textMuted }}>
             <div>
@@ -270,7 +273,7 @@ export function StatsView({ ctx, settings }) {
       size: "chart",
       render: () => (
         <Card>
-          <CardTitle title={tr("Reeksen")} help={tr("Hoe lang je series winst en verlies waren.")} tag={tag} />
+          <CardTitle title={tr("Reeksen")} help={tr("Hoe lang je reeksen van winst en verlies waren. De tabel telt hoe vaak je 1, 2, 3… keer op rij won of verloor. Een lange verliesreeks is normaal; kijk of je daarna je regels bleef volgen.")} tag={tag} />
           {s.streaks.histogram.length === 0 ? (
             <Empty>{tr("Nog geen reeksen")}</Empty>
           ) : (
@@ -314,7 +317,7 @@ export function StatsView({ ctx, settings }) {
       size: "full",
       render: () => (
       <Card>
-        <CardTitle title={tr("Jouw statistieken")} help={tr("Alles in één overzicht, in de gekozen eenheid.")} tag={tag} />
+        <CardTitle title={tr("Jouw statistieken")} help={tr("Alle kerncijfers op een rij: resultaat, dagen, de trades zelf, maanden, reeksen en drawdown. Alles volgt de periode, het account en de eenheid ($, % of R) die je bovenaan koos.")} tag={tag} />
         <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-x-6 gap-y-5">
           <Section title={tr("Het resultaat")}>
             <StatRow label={tr("Totaal resultaat")} value={unitValue(s.net, unit, { sign: true })} color={toneColor(s.net)} />
@@ -370,42 +373,42 @@ export function StatsView({ ctx, settings }) {
       label: "Per weekdag",
       size: "chart",
       render: () => (
-        <GroupCard title={tr("Per weekdag")} help={tr("Hoe elke weekdag je behandelt.")} tag={tag} rows={s.byWeekday} unit={unit} labelOf={(k) => weekdayShort2(k)} />
+        <GroupCard title={tr("Per weekdag")} help={tr("Hoe elke weekdag je behandelt: win %, netto resultaat, gemiddelde winst en verlies en duur. Een dag die steeds verlies geeft is een kandidaat om rustiger aan te doen.")} tag={tag} rows={s.byWeekday} unit={unit} labelOf={(k) => weekdayShort2(k)} />
       ),
     },
     byHour: {
       label: "Per uur",
       size: "chart",
       render: () => (
-        <GroupCard title={tr("Per uur")} help={tr("Hoe elk deel van de sessie je behandelt (uur waarop je opende).")} tag={tag} rows={s.byHour} unit={unit} labelOf={(k) => `${k}:00`} />
+        <GroupCard title={tr("Per uur")} help={tr("Hoe elk uur van de sessie je behandelt, op het uur waarop je de trade opende. Zo vind je je beste en je zwakste uren.")} tag={tag} rows={s.byHour} unit={unit} labelOf={(k) => `${k}:00`} />
       ),
     },
     byContract: {
       label: "Per contract",
       size: "chart",
       render: () => (
-        <GroupCard title={tr("Per contract")} help={tr("Netto resultaat per markt.")} tag={tag} rows={s.byContract} unit={unit} labelOf={(k) => tr(k)} />
+        <GroupCard title={tr("Per contract")} help={tr("Je nettoresultaat per contract of markt, met het aantal trades erbij. Zo zie je waar je echt geld verdient.")} tag={tag} rows={s.byContract} unit={unit} labelOf={(k) => tr(k)} />
       ),
     },
     bySide: {
       label: "Long of short?",
       size: "chart",
       render: () => (
-        <GroupCard title={tr("Long of short?")} help={tr("Of één richting stilletjes de andere draagt.")} tag={tag} rows={s.bySide} unit={unit} labelOf={(k) => tr(k)} />
+        <GroupCard title={tr("Long of short?")} help={tr("Je resultaat per richting. Zo zie je of je longs of je shorts het werk doen, en of één kant je resultaat stilletjes omlaag trekt.")} tag={tag} rows={s.bySide} unit={unit} labelOf={(k) => tr(k)} />
       ),
     },
     byMood: {
       label: "Per emotionele toestand",
       size: "chart",
       render: () => (
-        <GroupCard title={tr("Per emotionele toestand")} help={tr("Hoe je trades uitpakken per stemming die je vooraf aanvinkte.")} tag={tag} rows={s.byMood} unit={unit} labelOf={(k) => tr(k)} emptyText={tr("Vink bij je trades een emotie aan om dit te zien.")} />
+        <GroupCard title={tr("Per emotionele toestand")} help={tr("Je trades gegroepeerd op de emotie die je vooraf aanvinkte. Zo zie je bij welke stemming je goed handelt en bij welke je geld laat liggen. Vink bij je trades een emotie aan om dit te vullen.")} tag={tag} rows={s.byMood} unit={unit} labelOf={(k) => tr(k)} emptyText={tr("Vink bij je trades een emotie aan om dit te zien.")} />
       ),
     },
     bySetup: {
       label: "Per setup",
       size: "chart",
       render: () => (
-        <GroupCard title={tr("Per setup")} help={tr("Welke setups werken.")} tag={tag} rows={s.bySetup} unit={unit} labelOf={(k) => tr(k)} />
+        <GroupCard title={tr("Per setup")} help={tr("Je resultaat per setup die je bij je trades noteerde. Zo zie je welke setups geld opleveren en welke niet. Vul de setup in als je een trade logt.")} tag={tag} rows={s.bySetup} unit={unit} labelOf={(k) => tr(k)} />
       ),
     },
     newsDays: {
@@ -423,12 +426,54 @@ export function StatsView({ ctx, settings }) {
         />
       ),
     },
+    riskSize: {
+      label: "Risicogrootte",
+      size: "chart",
+      render: () => {
+        const fmtR = (v) => `${v < 0 ? "−" : ""}${fixed(Math.abs(v), v % 1 ? 1 : 0)}R`;
+        const bandLabel = (r) => (r.openLow ? `< ${fmtR(r.to)}` : r.openHigh ? `≥ ${fmtR(r.from)}` : `${fmtR(r.from)} … ${fmtR(r.to)}`);
+        const top = Math.max(0.0001, ...bands.rows.map((r) => r.share));
+        return (
+          <Card>
+            <CardTitle
+              title={tr("Risicogrootte")}
+              help={tr("Dit groepeert je gesloten trades op wat ze opleverden tegenover het risico dat je had gepland, en toont welk deel van je trades in elke band viel. De schakelaar stelt de breedte van de banden in: hele R of halve. De twee buitenste banden lopen door tot je slechtste en beste trade, zodat niets achter een open einde verdwijnt, en een band waar niets in viel wordt toch getekend, want de leegte hoort bij het beeld. Naast elke staaf staan de trades erachter en wat ze opleverden in de gekozen eenheid. Trades zonder gepland risico doen niet mee.")}
+              tag={tag}
+            />
+            <p className="text-xs mb-2" style={{ color: COLORS.textMuted }}>{tr("Welk deel van je trades in elke band valt.")}</p>
+            <div className="mb-3">
+              <Segmented size="sm" value={bandWidth} onChange={setBandWidth} options={[{ value: "1", label: "1R", raw: true }, { value: "0.5", label: "0.5R", raw: true }]} ariaLabel={tr("Breedte van de banden")} />
+            </div>
+            {bands.n === 0 ? (
+              <Empty>{tr("Geen trades met een gepland risico. Stel een gepland risico in bij je account, dan vult dit zich.")}</Empty>
+            ) : (
+              <div className="flex flex-col gap-1.5">
+                {[...bands.rows].reverse().map((r) => (
+                  <div key={r.from} className="grid items-center gap-2 text-[11px]" style={{ gridTemplateColumns: "76px minmax(0,1fr) 148px", fontFamily: MONO }}>
+                    <span style={{ color: COLORS.textMuted }}>{bandLabel(r)}</span>
+                    <span className="relative h-3 rounded" style={{ background: COLORS.grid }}>
+                      <span
+                        className="absolute inset-y-0 left-0 rounded"
+                        style={{ width: `${(r.share / top) * 100}%`, background: r.from >= 0 ? COLORS.green : COLORS.red, opacity: r.trades ? 1 : 0 }}
+                      />
+                    </span>
+                    <span className="text-right" style={{ color: r.trades ? COLORS.text : COLORS.textMuted }}>
+                      {r.trades ? `${pct(r.share)} · ${r.trades} · ${unitValue(r.net, unit, { sign: true, dec: unit === "$" ? 0 : 2 })}` : "—"}
+                    </span>
+                  </div>
+                ))}
+              </div>
+            )}
+          </Card>
+        );
+      },
+    },
     target: {
       label: "Tijd tot doel",
       size: "chart",
       render: () => (
         <Card>
-          <CardTitle title={tr("Tijd tot doel")} help={tr("Wanneer het tempo van je eigen record een dollardoel zou bereiken (samengestelde groei per marktdag).")} tag={tr("ALLE TIJD")} />
+          <CardTitle title={tr("Tijd tot doel")} help={tr("Hoe lang je met het tempo van je eigen record nodig hebt om een dollardoel te halen, met samengestelde groei per marktdag. Een hypothese op basis van je record tot nu toe, geen voorspelling.")} tag={tr("ALLE TIJD")} />
           <div className="flex flex-wrap items-center gap-2 mb-3">
             <Segmented size="sm" value={targetMode} onChange={setTargetMode} options={[{ value: "amount", label: "Bedrag" }, { value: "double", label: "Verdubbel account" }]} ariaLabel={tr("Doeltype")} />
             {targetMode === "amount" && (
@@ -471,7 +516,7 @@ export function StatsView({ ctx, settings }) {
       size: "chart",
       render: () => (
         <Card>
-          <CardTitle title={tr("Effectieve groeisnelheid")} help={tr("Het samengestelde tempo van je record per marktdag, doorgetrokken.")} tag={tr("ALLE TIJD")} />
+          <CardTitle title={tr("Effectieve groeisnelheid")} help={tr("Als het tempo van je record tot nu toe gelijk blijft, groeit je saldo in het gekozen aantal jaren zo ver. Het is een rekensom op je eigen record, geen voorspelling: een korte reeks zegt weinig.")} tag={tr("ALLE TIJD")} />
           <div className="mb-3">
             <Segmented size="sm" value={horizon} onChange={setHorizon} options={[{ value: "1", label: "1 jaar" }, { value: "2", label: "2 jaar" }, { value: "5", label: "5 jaar" }]} ariaLabel={tr("Horizon")} />
           </div>
@@ -498,7 +543,7 @@ export function StatsView({ ctx, settings }) {
       size: "full",
       render: () => (
         <Card>
-          <CardTitle title={tr("Monte Carlo")} help={tr("Waar handelen zoals dit toe leidt, en hoeveel daarvan volgorde-geluk is.")} tag={tag} />
+          <CardTitle title={tr("Monte Carlo")} help={tr("We schudden de volgorde van je eigen trades duizenden keren. Het eindresultaat blijft gelijk, maar de weg erheen niet: de waaier laat zien hoe diep je terugval had kunnen zijn met pech of geluk in de volgorde. Dit werkt pas vanaf 100 trades.")} tag={tag} />
           {mc ? (
             <FanChart mc={mc} />
           ) : (
@@ -514,7 +559,7 @@ export function StatsView({ ctx, settings }) {
       size: "chart",
       render: () => (
         <Card>
-          <CardTitle title={tr("Kans op ruïne")} help={tr("De kans dat een reeks van 100 trades (getrokken uit je eigen resultaten) je een bepaald deel van je startsaldo kost.")} tag={tag} />
+          <CardTitle title={tr("Kans op ruïne")} help={tr("We trekken duizenden keren 100 trades uit je eigen resultaten en tellen hoe vaak je daarbij een bepaald deel van je startsaldo kwijtraakt. Een lage kans betekent dat je aanpak een slechte reeks kan overleven. Dit werkt pas vanaf 100 trades.")} tag={tag} />
           {ruin ? (
             <>
               <div className="mb-2">
@@ -545,7 +590,7 @@ export function StatsView({ ctx, settings }) {
       size: "chart",
       render: () => (
         <Card>
-          <CardTitle title={tr("Kelly-criterium")} help={tr("Het risico per trade dat je winrate en uitbetaling zouden kunnen dragen, naast wat je plant.")} tag={tag} />
+          <CardTitle title={tr("Kelly-criterium")} help={tr("Kelly rekent uit hoeveel van je account je per trade zou kunnen riskeren, op basis van je winrate en de verhouding tussen winst en verlies. Half Kelly is voorzichtiger. Vergelijk het met je geplande risico; het is een ruwe richtlijn, geen advies.")} tag={tag} />
           {k == null ? (
             <Empty>{tr("Er zijn winnende én verliezende trades nodig.")}</Empty>
           ) : (

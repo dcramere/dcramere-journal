@@ -41,6 +41,30 @@ export function groupStats(trades, keyFn, unit) {
   return [...map.entries()].map(([key, list]) => ({ key, ...summarize(list, unit) }));
 }
 
+// Verdeelt trades over R-banden (resultaat tegenover het geplande risico). width: 1 of 0.5.
+// Elke band loopt van k*width tot (k+1)*width. Lege banden blijven in de lijst. De twee buitenste banden zijn
+// open: ze nemen alles mee tot de slechtste en beste trade wanneer die buiten lowCut/highCut vallen.
+// Trades zonder gepland risico (R onbekend) doen niet mee.
+export function riskBands(trades, unit, width = 1, { lowCut = -3, highCut = 6 } = {}) {
+  const used = trades.filter((t) => t.v.R != null && Number.isFinite(t.v.R));
+  if (!used.length) return { n: 0, width, rows: [] };
+  const idx = (r) => Math.floor(r / width + EPS);
+  const ks = used.map((t) => idx(t.v.R));
+  const minK = Math.min(...ks);
+  const maxK = Math.max(...ks);
+  const lo = Math.max(minK, idx(lowCut));
+  const hi = Math.max(lo, Math.min(maxK, idx(highCut)));
+  const rows = [];
+  for (let k = lo; k <= hi; k += 1) rows.push({ from: k * width, to: (k + 1) * width, openLow: k === lo && minK < lo, openHigh: k === hi && maxK > hi, trades: 0, net: 0, share: 0 });
+  used.forEach((t, i) => {
+    const row = rows[Math.min(hi, Math.max(lo, ks[i])) - lo];
+    row.trades += 1;
+    row.net += t.v[unit] ?? 0;
+  });
+  for (const r of rows) r.share = r.trades / used.length;
+  return { n: used.length, width, rows };
+}
+
 function runs(flags) {
   // flags: array van 1 (winst), -1 (verlies), 0 (breakeven)
   const histogram = new Map();

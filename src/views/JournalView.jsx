@@ -193,7 +193,7 @@ function buildWidgets(env) {
       size: "chart",
       render: () => (
         <Card>
-          <CardTitle title={tr("Recente trades")} tag={tag} />
+          <CardTitle title={tr("Recente trades")} help={tr("De laatste zes trades in de gekozen periode, de nieuwste bovenaan, met het resultaat in de gekozen eenheid. Klik op een trade om hem te openen.")} tag={tag} />
           {recent.length === 0 ? (
             <Empty>{tr("Nog geen trades. Log je eerste trade of importeer een bestand.")}</Empty>
           ) : (
@@ -256,7 +256,7 @@ function buildWidgets(env) {
         <Card>
           <CardTitle
             title={tr("Emotie & resultaat")}
-            help={tr("Gemiddeld resultaat per trade, per emotionele toestand die je vooraf aanvinkte.")}
+            help={tr("Het gemiddelde resultaat per trade, per emotie die je vooraf aanvinkte (n is het aantal trades). Een staaf naar rechts betekent dat je in die stemming gemiddeld winst maakt. Vink bij je trades een emotie aan om dit te vullen.")}
             tag={tag}
           />
           {moodRows.length === 0 ? <Empty>{tr("Vink bij een trade je emotionele toestand aan om hier patronen te zien.")}</Empty> : <HBars rows={moodRows} />}
@@ -268,7 +268,7 @@ function buildWidgets(env) {
       size: "chart",
       render: () => (
         <Card>
-          <CardTitle title={tr("Win %")} help={tr("Je winrate over alles tot en met die dag, tegenover het percentage dat je nodig had om quitte te spelen.")} tag={tag} />
+          <CardTitle title={tr("Win %")} help={tr("Elk punt is je winrate over alles tot en met die dag, tegenover het percentage dat je bij je winst/verlies-verhouding nodig had om quitte te spelen (de stippellijn). Zit je erboven, dan is je winrate genoeg.")} tag={tag} />
           <LineChart
             xs={dates}
             xFormat={xFmt}
@@ -287,7 +287,7 @@ function buildWidgets(env) {
       size: "chart",
       render: () => (
         <Card>
-          <CardTitle title={tr("Gem. winst : gem. verlies")} help={tr("Je winnaars tegenover je verliezers, tegenover de verhouding die je nodig had.")} tag={tag} />
+          <CardTitle title={tr("Gem. winst : gem. verlies")} help={tr("Je gemiddelde winnaar gedeeld door je gemiddelde verliezer, tegenover de verhouding die je bij je winrate nodig had om quitte te spelen (de stippellijn). Zit je erboven, dan verdien je geld.")} tag={tag} />
           <LineChart
             xs={dates}
             xFormat={xFmt}
@@ -306,7 +306,7 @@ function buildWidgets(env) {
       size: "chart",
       render: () => (
         <Card>
-          <CardTitle title={tr("Gem. winst / gem. verlies")} help={tr("Elk punt is alles tot en met die dag. Winnaars boven de lijn, verliezers eronder.")} tag={tag} />
+          <CardTitle title={tr("Gem. winst / gem. verlies")} help={tr("Je gemiddelde winnaar (boven de lijn) tegenover je gemiddelde verliezer (eronder), over alles tot en met die dag. Worden je verliezers groter dan je winnaars, dan moet je winrate dat goedmaken.")} tag={tag} />
           <LineChart
             xs={dates}
             xFormat={xFmt}
@@ -324,7 +324,7 @@ function buildWidgets(env) {
       size: "chart",
       render: () => (
         <Card>
-          <CardTitle title={tr("Expectancy")} help={tr("Wat één trade gemiddeld opleverde, over alles tot en met die dag.")} tag={tag} />
+          <CardTitle title={tr("Expectancy")} help={tr("Wat een gemiddelde trade opleverde, over alles tot en met die dag (nettoresultaat gedeeld door het aantal trades). Boven nul heeft je aanpak een voordeel; een stijgende lijn betekent dat je beter wordt.")} tag={tag} />
           <LineChart
             xs={dates}
             xFormat={xFmt}
@@ -339,7 +339,7 @@ function buildWidgets(env) {
       size: "chart",
       render: () => (
         <Card>
-          <CardTitle title={tr("Drawdown")} help={tr("Hoe ver je onder je eigen hoogste punt hebt gezeten.")} tag={tag} />
+          <CardTitle title={tr("Drawdown")} help={tr("Hoe ver je resultaat onder je eigen hoogste punt zat, na elke dag. ‘Diepste’ is je grootste terugval en ‘Langst onder’ is hoe lang je nodig had om weer op een hoogtepunt te komen. Zo meet je wat je record je echt kostte.")} tag={tag} />
           <LineChart xs={dates} xFormat={xFmt} yFormat={fmtAxis} series={[{ name: "Drawdown", color: COLORS.red, values: stats.series.map((s) => -s.dd), area: true }]} />
           <div className="grid grid-cols-3 gap-2 mt-2 text-[11px]" style={{ color: COLORS.textMuted }}>
             <div>
@@ -363,7 +363,7 @@ function buildWidgets(env) {
       size: "chart",
       render: () => (
         <Card>
-          <CardTitle title={tr("Positiegrootte")} help={tr("Hoe groot één trade was, dag voor dag (gemiddeld aantal contracten).")} tag={tag} />
+          <CardTitle title={tr("Positiegrootte")} help={tr("Het gemiddelde aantal contracten per trade, dag voor dag, met je gemiddelde als stippellijn. Springt je positiegrootte na een verlies omhoog, dan is dat vaak een teken van tilt.")} tag={tag} />
           <LineChart
             xs={dates}
             xFormat={xFmt}
@@ -380,7 +380,7 @@ function buildWidgets(env) {
       size: "chart",
       render: () => (
         <Card>
-          <CardTitle title={tr("Netto dagresultaat")} help={tr("Eén staaf per handelsdag, na kosten.")} tag={tag} />
+          <CardTitle title={tr("Netto dagresultaat")} help={tr("Eén staaf per handelsdag: groen is winst, rood is verlies, na kosten. Zo zie je of je resultaat van een paar uitschieters komt of van veel gewone dagen.")} tag={tag} />
           <BarChart
             yFormat={fmtAxis}
             items={stats.days.map((d) => ({
@@ -398,7 +398,7 @@ function buildWidgets(env) {
       size: "chart",
       render: () => (
         <Card>
-          <CardTitle title={tr("Per houdtijd")} help={tr("Elk punt is één trade, geplaatst op hoe lang je hem vasthield (minuten).")} tag={tag} />
+          <CardTitle title={tr("Per houdtijd")} help={tr("Elk punt is één trade: links korte trades, rechts lange; hoog is winst, laag is verlies. Zo zie je of je verliezers langer duren dan je winnaars, wat vaak betekent dat je erop blijft hopen.")} tag={tag} />
           <DotPlot points={stats.holdPoints.map((p) => ({ ...p, label: duration(p.x * 60000) }))} xDomain={[0, maxHold]} xTicks={holdTicks(maxHold)} yFormat={fmtAxis} />
         </Card>
       ),
@@ -408,7 +408,7 @@ function buildWidgets(env) {
       size: "chart",
       render: () => (
         <Card>
-          <CardTitle title={tr("Per tijdstip")} help={tr("Elk punt is één trade, geplaatst op het uur waarop je hem opende.")} tag={tag} />
+          <CardTitle title={tr("Per tijdstip")} help={tr("Elk punt is één trade, geplaatst op het uur waarop je hem opende; hoog is winst, laag is verlies. Zo zie je in welk deel van de sessie je goed of slecht handelt.")} tag={tag} />
           <DotPlot
             points={stats.timePoints.map((p) => ({ ...p, label: `${String(Math.floor(p.x)).padStart(2, "0")}:${String(Math.round((p.x % 1) * 60)).padStart(2, "0")}` }))}
             xDomain={[hMin, hMax]}
@@ -423,7 +423,7 @@ function buildWidgets(env) {
       size: "full",
       render: () => (
         <Card>
-          <CardTitle title={tr("Cumulatief resultaat")} help={tr("Elke handelsdag opgeteld, op volgorde. De vorm zegt meer dan het eindpunt.")} tag={tag} />
+          <CardTitle title={tr("Cumulatief resultaat")} help={tr("Je resultaat dag na dag opgeteld. Kijk vooral naar de vorm: een rustig stijgende lijn is gezonder dan een lijn met grote pieken en dalen, ook als beide op hetzelfde punt eindigen.")} tag={tag} />
           <p className="text-xs mb-2" style={{ color: COLORS.textMuted }}>
             {stats.series.length
               ? tr("Elke handelsdag sinds {d} · eindigend op {v}", { d: dateOnlyLabel(stats.series[0].date), v: unitValue(stats.net, unit) })

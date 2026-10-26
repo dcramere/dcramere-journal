@@ -1,4 +1,5 @@
-import React, { useEffect } from "react";
+import React, { useEffect, useId, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import { X } from "lucide-react";
 import { COLORS, MONO } from "../theme.js";
 import { tr } from "../i18n.js";
@@ -27,24 +28,95 @@ export function Card({ children, tone, className = "", style }) {
   );
 }
 
+// Het vraagteken naast een titel. Toont de uitleg bij hoveren, focus en tikken (ook op telefoons), sluit bij Escape of buiten tikken.
 export function HelpTip({ text }) {
+  const [open, setOpen] = useState(false);
+  const [pos, setPos] = useState(null);
+  const btn = useRef(null);
+  const pointer = useRef("mouse");
+  const id = useId();
+
+  const place = () => {
+    const r = btn.current?.getBoundingClientRect();
+    if (!r) return;
+    const width = Math.min(300, window.innerWidth - 24);
+    const left = Math.max(12, Math.min(r.left + r.width / 2 - width / 2, window.innerWidth - width - 12));
+    const below = r.bottom + 8 + 160 < window.innerHeight || r.top < 180;
+    setPos({ left, width, top: below ? r.bottom + 8 : undefined, bottom: below ? undefined : window.innerHeight - r.top + 8 });
+  };
+
+  useEffect(() => {
+    if (!open) return undefined;
+    place();
+    const close = () => setOpen(false);
+    const onKey = (e) => e.key === "Escape" && setOpen(false);
+    const onDown = (e) => !btn.current?.contains(e.target) && setOpen(false);
+    window.addEventListener("keydown", onKey);
+    window.addEventListener("pointerdown", onDown);
+    window.addEventListener("scroll", close, true);
+    window.addEventListener("resize", close);
+    return () => {
+      window.removeEventListener("keydown", onKey);
+      window.removeEventListener("pointerdown", onDown);
+      window.removeEventListener("scroll", close, true);
+      window.removeEventListener("resize", close);
+    };
+  }, [open]);
+
   return (
-    <span
-      title={text}
-      aria-label={text}
-      tabIndex={0}
-      className="inline-flex items-center justify-center rounded-full cursor-help select-none"
-      style={{
-        width: 14,
-        height: 14,
-        fontSize: 9,
-        fontWeight: 700,
-        color: COLORS.textMuted,
-        border: `1px solid ${COLORS.cardBorder}`,
-      }}
-    >
-      ?
-    </span>
+    <>
+      <button
+        ref={btn}
+        type="button"
+        aria-label={tr("Uitleg")}
+        aria-describedby={open ? id : undefined}
+        aria-expanded={open}
+        onPointerDown={(e) => {
+          pointer.current = e.pointerType;
+        }}
+        onClick={() => setOpen((o) => (pointer.current === "mouse" ? true : !o))}
+        onPointerEnter={(e) => e.pointerType === "mouse" && setOpen(true)}
+        onPointerLeave={(e) => e.pointerType === "mouse" && setOpen(false)}
+        onFocus={(e) => e.currentTarget.matches(":focus-visible") && setOpen(true)}
+        onBlur={() => setOpen(false)}
+        className="inline-flex items-center justify-center rounded-full cursor-help select-none"
+        style={{
+          width: 14,
+          height: 14,
+          fontSize: 9,
+          fontWeight: 700,
+          color: open ? COLORS.gold : COLORS.textMuted,
+          border: `1px solid ${open ? COLORS.gold : COLORS.cardBorder}`,
+          background: "transparent",
+          textTransform: "none",
+        }}
+      >
+        ?
+      </button>
+      {open && pos &&
+        createPortal(
+          <div
+            id={id}
+            role="tooltip"
+            className="fixed z-[60] rounded-lg p-3 text-xs leading-relaxed normal-case tracking-normal"
+            style={{
+              left: pos.left,
+              top: pos.top,
+              bottom: pos.bottom,
+              width: pos.width,
+              background: COLORS.cardHi,
+              border: `1px solid ${COLORS.gold}`,
+              color: COLORS.text,
+              fontFamily: "inherit",
+              boxShadow: "0 8px 28px rgba(0,0,0,0.55)",
+              pointerEvents: "none",
+            }}
+          >
+            {text}
+          </div>,
+          document.body
+        )}
+    </>
   );
 }
 

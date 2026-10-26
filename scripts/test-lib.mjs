@@ -1,6 +1,6 @@
 // Tests voor de rekenlaag (statistieken, CSV, tijdzones, migratie).  npm run test:lib
 import { makeAccount, enrich, migrateEntries } from "../src/lib/model.js";
-import { computeStats, balanceSeries, growthStats, daysToTarget, projectBalance, kelly, monteCarlo, riskOfRuin } from "../src/lib/metrics.js";
+import { riskBands, computeStats, balanceSeries, growthStats, daysToTarget, projectBalance, kelly, monteCarlo, riskOfRuin } from "../src/lib/metrics.js";
 import { importCsv, exportCsv, parseMoney } from "../src/lib/csv.js";
 import { wallToEpoch, partsInTz, marketDaysBetween } from "../src/lib/tz.js";
 import { rootSymbol, pointValue } from "../src/lib/contracts.js";
@@ -232,6 +232,20 @@ const newsTrades = ["2026-10-14", "2026-10-15", "2026-10-15", "2026-10-13"].map(
 const newsRows = N.newsDayStats(newsTrades, "$");
 eq("news stats: a trade counts for every release of its day", newsRows.filter((r) => ["ppi", "retail"].includes(r.key)).map((r) => r.trades).join(), "2,2");
 eq("news stats: trades on quiet days are left out", newsRows.reduce((m, r) => m + r.trades, 0), 5);
+
+// Risicogroottekaart
+const rt = (r, usd) => ({ v: { R: r, $: usd, "%": null } });
+const rb = riskBands([rt(-1.5, -150), rt(-0.3, -30), rt(0.2, 20), rt(0.8, 80), rt(2.4, 240), rt(null, 99)], "$", 1);
+eq("risk bands: trades without planned risk sit out", rb.n, 5);
+eq("risk bands: bands run from worst to best, empty ones kept", rb.rows.map((r) => r.from).join(), "-2,-1,0,1,2");
+eq("risk bands: counts per band", rb.rows.map((r) => r.trades).join(), "1,1,2,0,1");
+eq("risk bands: net per band in the chosen unit", rb.rows[2].net, 100);
+eq("risk bands: shares add up to 1", rb.rows.reduce((s, r) => s + r.share, 0), 1, 1e-9);
+eq("risk bands: half-R bands", riskBands([rt(0.3, 1), rt(0.7, 1)], "$", 0.5).rows.map((r) => r.trades).join(), "1,1");
+const wide = riskBands([rt(-9, -9), rt(-3.5, -3), rt(0, 0), rt(12, 12), rt(7.5, 7)], "$", 1);
+eq("risk bands: the outer bands are open and keep far outliers", wide.rows[0].openLow && wide.rows.at(-1).openHigh && wide.rows[0].trades === 2 && wide.rows.at(-1).trades === 2, true);
+eq("risk bands: a boundary value belongs to the upper band", riskBands([rt(1, 1)], "$", 1).rows[0].from, 1);
+eq("risk bands: nothing in, nothing out", riskBands([], "$", 1).rows.length, 0);
 
 console.log(fails ? `\n${fails} FAILED` : "\nALL PASSED");
 process.exit(fails ? 1 : 0);

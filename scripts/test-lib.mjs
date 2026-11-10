@@ -1,7 +1,7 @@
 // Tests voor de rekenlaag (statistieken, CSV, tijdzones, migratie).  npm run test:lib
 import { makeAccount, enrich, migrateEntries } from "../src/lib/model.js";
 import { riskBands, computeStats, balanceSeries, growthStats, daysToTarget, projectBalance, kelly, monteCarlo, riskOfRuin } from "../src/lib/metrics.js";
-import { importCsv, exportCsv, parseMoney } from "../src/lib/csv.js";
+import { importCsv, exportCsv, parseMoney, decodeCsvBytes } from "../src/lib/csv.js";
 import { wallToEpoch, partsInTz, marketDaysBetween } from "../src/lib/tz.js";
 import { rootSymbol, pointValue } from "../src/lib/contracts.js";
 import { buildReport, isoWeekKey, lastCompletedPeriods, previousPeriod } from "../src/lib/report.js";
@@ -246,6 +246,28 @@ const wide = riskBands([rt(-9, -9), rt(-3.5, -3), rt(0, 0), rt(12, 12), rt(7.5, 
 eq("risk bands: the outer bands are open and keep far outliers", wide.rows[0].openLow && wide.rows.at(-1).openHigh && wide.rows[0].trades === 2 && wide.rows.at(-1).trades === 2, true);
 eq("risk bands: a boundary value belongs to the upper band", riskBands([rt(1, 1)], "$", 1).rows[0].from, 1);
 eq("risk bands: nothing in, nothing out", riskBands([], "$", 1).rows.length, 0);
+
+// TradeNation: verzonnen voorbeeld in hetzelfde formaat (UTF-16 met BOM, dag/maand/jaar, negatief aantal = short).
+const tnText = [
+  "Transaction Date,Serial,Action,Description,Amount,Open date,Opening,Closing,P/L,Status,Balance,Currency",
+  "09/11/2026 18:00:00,1003,Trade Payable,US Tech 100,-1.00,09/11/2026 17:00:00,27000.000000,27020.000000,-20.00,,500.00,USD",
+  "09/11/2026 16:30:00,1002,Trade Receivable,US Tech 100,0.50,09/11/2026 16:00:00,27000.000000,27040.000000,20.00,,520.00,USD",
+  "21/10/2026 04:22:44,1001,Fund receivable,Online Transfer Cash In,,21/10/2026 04:22:44,0.000000,0.000000,500.00,,500.00,USD",
+  "",
+].join("\r\n");
+const tnBytes = Buffer.concat([Buffer.from([0xff, 0xfe]), Buffer.from(tnText, "utf16le")]);
+const tn = importCsv(decodeCsvBytes(tnBytes), { accountId: "a", tz: "UTC" });
+eq("tradenation: UTF-16 file is decoded", tn.format, "TradeNation");
+eq("tradenation: two trades, the deposit is not a trade", tn.trades.length, 2);
+const tnShort = tn.trades.find((t) => t.direction === "Short");
+eq("tradenation: negative amount is a short", tnShort.qty, 1);
+eq("tradenation: result is taken as given", tnShort.pnl, -20);
+eq("tradenation: entry and exit prices", `${tnShort.entryPrice}->${tnShort.exitPrice}`, "27000->27020");
+eq("tradenation: dates are day first (9 Nov, not 11 Sep)", new Date(tnShort.closedAt).toISOString(), "2026-11-09T18:00:00.000Z");
+eq("tradenation: the file time zone shifts the moment", new Date(importCsv(tnText, { accountId: "a", tz: "America/New_York" }).trades[0].closedAt).toISOString(), "2026-11-09T23:00:00.000Z");
+eq("tradenation: the deposit becomes an adjustment", `${tn.adjustments[0].date} ${tn.adjustments[0].amount}`, "2026-10-21 500");
+eq("tradenation: net of the trades", tn.trades.reduce((s, t) => s + t.pnl, 0), 0);
+eq("decode: a plain UTF-8 file still works", decodeCsvBytes(Buffer.from("\uFEFFa,b\n1,2")), "a,b\n1,2");
 
 console.log(fails ? `\n${fails} FAILED` : "\nALL PASSED");
 process.exit(fails ? 1 : 0);

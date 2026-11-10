@@ -11,7 +11,7 @@ export const GUIDE_SECTIONS = [
     title: T("Snel starten"),
     body: [
       T("1. <b>Maak een account</b> (of log in). Zonder inlog blijft alles alleen in deze browser staan."),
-      T("2. Open het tabblad <b>Import</b>: pas je account aan (naam, <b>startsaldo</b>, <b>gepland risico per trade</b>) en sleep je Tradovate-export in het vak. Of log trades zelf met <b>+ Trade</b> rechtsboven."),
+      T("2. Open het tabblad <b>Import</b>: pas je account aan (naam, <b>startsaldo</b>, <b>gepland risico per trade</b>) en sleep je export (Tradovate of TradeNation) in het vak. Of log trades zelf met <b>+ Trade</b> rechtsboven."),
       T("3. Vink bij elke trade je <b>emotie</b> aan, en schrijf een korte <b>les</b> als er iets te leren valt."),
       T("4. Kijk bij <b>Journal</b> naar je cijfers, bij <b>Stats</b> naar patronen en bij <b>Rapport</b> naar wat goed gaat en wat beter kan."),
     ],
@@ -43,7 +43,7 @@ export const GUIDE_SECTIONS = [
     id: "import",
     title: T("Import en accounts"),
     body: [
-      T("• <b>Tradovate-export importeren</b>: sleep een CSV (Performance of Orders) op een account of kies <b>Kies een bestand</b>. Zet de tijdzone van het bestand goed. Trades die je al had, worden overgeslagen. Ook de CSV-export van dit journal wordt herkend."),
+      T("• <b>Een export importeren</b>: sleep een CSV van <b>Tradovate</b> (Performance of Orders) of <b>TradeNation</b> (TransactionHistory) op een account of kies <b>Kies een bestand</b>. Zet de tijdzone van het bestand goed. Trades die je al had, worden overgeslagen. Stortingen en opnames uit een TradeNation-bestand komen bij je account te staan. Ook de CSV-export van dit journal wordt herkend."),
       T("• <b>Orders</b> worden per positie samengevoegd: meerdere fills worden één trade."),
       T("• <b>Nieuw account</b>: voor een live-, prop-, paper- of backtestaccount, elk met eigen startsaldo en risico."),
       T("• <b>Instellingen</b> per account: naam, broker, startsaldo, commissie per contract, type, <b>gepland risico per trade</b> (in % of $) en de risicomodus <b>Vast</b> of <b>Samengesteld</b> (risico groeit mee met je saldo)."),

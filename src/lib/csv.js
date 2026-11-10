@@ -1,9 +1,22 @@
 import { tr } from "../i18n.js";
 import { pointValue, rootSymbol } from "./contracts.js";
 import { newId } from "./model.js";
-import { wallToEpoch } from "./tz.js";
+import { partsInTz, wallToEpoch } from "./tz.js";
 
 // ---------- Parsing ----------
+
+// Leest de bytes van een CSV als tekst. Sommige exports (o.a. TradeNation) zijn UTF-16 in plaats van UTF-8;
+// dat herkennen we aan de BOM of aan de nulbytes tussen de tekens.
+export function decodeCsvBytes(buffer) {
+  const b = new Uint8Array(buffer);
+  let enc = "utf-8";
+  if (b[0] === 0xff && b[1] === 0xfe) enc = "utf-16le";
+  else if (b[0] === 0xfe && b[1] === 0xff) enc = "utf-16be";
+  else if (b.length > 3 && b[1] === 0 && b[3] === 0) enc = "utf-16le";
+  else if (b.length > 3 && b[0] === 0 && b[2] === 0) enc = "utf-16be";
+  return new TextDecoder(enc).decode(b).replace(/^\uFEFF/, "");
+}
+
 
 export function parseCsv(text) {
   const src = String(text).replace(/^﻿/, "");
@@ -304,6 +317,68 @@ function fromOwnExport(rows, idx, { accountId, tz }) {
   return { trades, warnings, format: "DCRAMERE export" };
 }
 
+// DD/MM/YYYY HH:MM(:SS), zoals TradeNation exporteert (dag vóór maand, anders dan parseTimestamp).
+export function parseDayFirstTimestamp(raw, tz) {
+  const m = String(raw || "").trim().match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})[ T](\d{1,2}):(\d{2})(?::(\d{2}))?$/);
+  if (!m) return null;
+  return wallToEpoch(Number(m[3]), Number(m[2]), Number(m[1]), Number(m[4]), Number(m[5]), Number(m[6] || 0), tz);
+}
+
+// TradeNation TransactionHistory.csv: één rij per gesloten positie. Amount is het aantal (negatief = short),
+// P/L is al netto (de kosten zitten in de spread). Stortingen en opnames komen als aparte rijen mee.
+function fromTradeNation(rows, idx, { accountId, tz }) {
+  const col = {
+    action: idx("action"),
+    symbol: idx("description"),
+    amount: idx("amount"),
+    opened: idx("opendate"),
+    closed: idx("transactiondate"),
+    entry: idx("opening"),
+    exit: idx("closing"),
+    pnl: idx("p/l", "pl"),
+  };
+  const trades = [];
+  const adjustments = [];
+  const warnings = [];
+  let skipped = 0;
+  rows.forEach((r, i) => {
+    const action = String(r[col.action] || "").trim();
+    const closed = parseDayFirstTimestamp(r[col.closed], tz);
+    const pnl = parseMoney(r[col.pnl]);
+    if (/^fund/i.test(action)) {
+      if (closed == null || !pnl) return;
+      const note = String(r[col.symbol] || action).trim();
+      adjustments.push({ date: partsInTz(closed, tz).date, amount: /payable/i.test(action) ? -Math.abs(pnl) : Math.abs(pnl), note: `TradeNation: ${note}` });
+      return;
+    }
+    if (!/^trade/i.test(action)) {
+      skipped += 1;
+      return;
+    }
+    const opened = parseDayFirstTimestamp(r[col.opened], tz);
+    const amount = parseMoney(r[col.amount]);
+    if (opened == null || closed == null || pnl == null || !amount) {
+      warnings.push(tr("Rij {n} overgeslagen (tijd of P&L ontbreekt).", { n: i + 2 }));
+      return;
+    }
+    trades.push(
+      baseTrade(accountId, {
+        symbol: String(r[col.symbol] || "").trim() || "?",
+        direction: amount > 0 ? "Long" : "Short",
+        qty: Math.abs(amount),
+        entryPrice: parseMoney(r[col.entry]),
+        exitPrice: parseMoney(r[col.exit]),
+        openedAt: Math.min(opened, closed),
+        closedAt: Math.max(opened, closed),
+        pnl,
+        source: "csv",
+      })
+    );
+  });
+  if (skipped) warnings.push(tr("{n} rij(en) overgeslagen die geen trade of storting zijn.", { n: skipped }));
+  return { trades, adjustments, warnings, format: "TradeNation" };
+}
+
 // Herkent het bestandstype aan de kolomnamen en geeft trades terug.
 export function importCsv(text, options) {
   const rows = parseCsv(text);
@@ -312,6 +387,7 @@ export function importCsv(text, options) {
   const idx = indexer(headers);
   const body = rows.slice(1);
   if (idx("boughtTimestamp") >= 0 && idx("soldTimestamp") >= 0) return fromPerformance(body, idx, options);
+  if (idx("serial") >= 0 && idx("action") >= 0 && idx("opendate") >= 0 && idx("transactiondate") >= 0 && idx("opening") >= 0) return fromTradeNation(body, idx, options);
   if (idx("opened") >= 0 && idx("closed") >= 0 && idx("pnl") >= 0) return fromOwnExport(body, idx, options);
   if ((idx("bs", "side") >= 0 && idx("contract", "symbol") >= 0) && (idx("filledQty", "qty") >= 0)) {
     return fromOrders(body, idx, options);

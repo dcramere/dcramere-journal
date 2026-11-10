@@ -3,7 +3,7 @@ import { Rich } from "../ui/Rich.jsx";
 import React, { useRef, useState } from "react";
 import { ChevronDown, Plus, Trash2, Upload } from "lucide-react";
 import { COLORS, MONO } from "../theme.js";
-import { importCsv } from "../lib/csv.js";
+import { decodeCsvBytes, importCsv } from "../lib/csv.js";
 import { money } from "../lib/format.js";
 import { ACCOUNT_TYPES, newId } from "../lib/model.js";
 import { TIMEZONES, todayInTz } from "../lib/tz.js";
@@ -237,7 +237,8 @@ function AccountCard({ account, tradeCount, balance, tz, onImportFile, onUpdate,
           {message.ok ? (
             <>
               {message.format}: {tr(message.added === 1 ? "{n} nieuwe trade" : "{n} nieuwe trades", { n: message.added })}
-              {message.skipped ? tr(", {n} dubbel overgeslagen", { n: message.skipped }) : ""}.
+              {message.skipped ? tr(", {n} dubbel overgeslagen", { n: message.skipped }) : ""}
+              {message.deposits ? tr(", {n} storting/opname toegevoegd", { n: message.deposits }) : ""}.
               {message.warnings.map((w) => (
                 <div key={w} style={{ color: COLORS.gold }}>
                   {w}
@@ -263,7 +264,17 @@ function AccountCard({ account, tradeCount, balance, tz, onImportFile, onUpdate,
             <li>{tr("Zet hierboven de tijdzone van het bestand goed en sleep het bestand in het vak.")}</li>
           </ol>
           <p className="text-[11px] mt-2" style={{ color: COLORS.textMuted }}>
-            {tr("Herkend: Tradovate Performance, Tradovate Orders (fills worden per positie samengevoegd) en de eigen CSV-export van dit journal. Dubbele trades worden overgeslagen.")}
+            {tr("Herkend: Tradovate Performance, Tradovate Orders (fills worden per positie samengevoegd), TradeNation en de eigen CSV-export van dit journal. Dubbele trades worden overgeslagen.")}
+          </p>
+        </Collapse>
+        <Collapse title={tr("Zo exporteer je uit TradeNation")}>
+          <ol className="list-decimal list-inside text-xs flex flex-col gap-1" style={{ color: COLORS.textMuted }}>
+            <li>{tr("Open je TradeNation-account en ga naar je transactiegeschiedenis (Transaction History).")}</li>
+            <li>{tr("Kies het datumbereik en exporteer de lijst als CSV; het bestand heet meestal TransactionHistory.csv.")}</li>
+            <li>{tr("Kies hierboven de tijdzone waarin je TradeNation-platform de tijden toont, en sleep het bestand in het vak.")}</li>
+          </ol>
+          <p className="text-[11px] mt-2" style={{ color: COLORS.textMuted }}>
+            {tr("Per rij komt één gesloten positie binnen met instap, uitstap en resultaat. Stortingen en opnames worden bij ‘Stortingen en opnames’ gezet. Een UTF-16-bestand, zoals TradeNation dat maakt, wordt automatisch goed gelezen.")}
           </p>
         </Collapse>
         <Collapse title={tr("Instellingen")}>
@@ -349,11 +360,17 @@ export function ImportView({ journal, accountBalances, tradeCounts, footer = nul
   const restoreRef = useRef(null);
 
   async function onImportFile(account, file, fileTz) {
-    const text = await file.text();
+    const text = decodeCsvBytes(await file.arrayBuffer());
     const res = importCsv(text, { accountId: account.id, tz: fileTz, commission: account.commission });
     if (!res.trades.length) throw new Error(res.warnings[0] || tr("Geen trades gevonden in dit bestand."));
     const { added, skipped } = importTrades(res.trades, { filename: file.name, accountId: account.id, format: res.format });
-    return { added, skipped, warnings: res.warnings.slice(0, 4), format: res.format };
+    // Stortingen en opnames uit het bestand, zonder dubbelen bij een tweede import.
+    const have = new Set((account.adjustments || []).map((a) => `${a.date}|${a.amount}|${a.note}`));
+    const fresh = (res.adjustments || []).filter((a) => !have.has(`${a.date}|${a.amount}|${a.note}`));
+    if (fresh.length) updateAccount(account.id, { adjustments: [...(account.adjustments || []), ...fresh.map((a) => ({ id: newId(), ...a }))] });
+    const warnings = [...res.warnings];
+    if (fresh.length && Number(account.startBalance) > 0) warnings.push(tr("Er is een storting toegevoegd. Is dat je eerste storting, zet dan het startsaldo van dit account op 0 (bij Instellingen), anders telt het dubbel."));
+    return { added, skipped, deposits: fresh.length, warnings: warnings.slice(0, 4), format: res.format };
   }
 
   async function backup() {

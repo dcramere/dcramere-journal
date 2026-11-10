@@ -216,6 +216,21 @@ De lokale API gebruikt setup-code `dev-setup-token` en bewaart data in `.dev-db/
 
 **EN** The gold dots in the calendar, the *News ahead* card and the *On news days* statistic come from `src/lib/news.js`. It holds the official dates from BLS (CPI, PPI, jobs report), the Federal Reserve (rate decision and minutes), BEA (GDP, PCE) and Census (retail sales); ISM follows a fixed rule (1st and 3rd business day). The list runs through the end of 2027 and lives in the code, with no external service behind it. Top it up once or twice a year: add the new dates to the lists at the top and run `npm test`. GDP and PCE for 2027 and retail sales before October 2026 are not in yet.
 
+## AI-uitleg bij rapporten / AI explanation on reports
+
+**NL** Onder elk rapport staat de knop *Maak uitleg met AI* (klant en coach). Dan schrijft Claude een uitgebreide uitleg: wat de cijfers betekenen, waarom ze ertoe doen, waar winst weglekt, patronen en een plan van drie oefeningen. Zonder sleutel is de knop onzichtbaar en werkt de rest van de app gewoon.
+- **Aanzetten:** maak in console.anthropic.com een API-sleutel en zet die in Vercel als `ANTHROPIC_API_KEY` (Settings → Environment Variables), daarna opnieuw deployen. Stel in de console een maandelijks bestedingslimiet in. Zet de sleutel nooit in de code of in een chat.
+- **Optioneel:** `AI_MODEL` (standaard `claude-opus-5-5`; `claude-sonnet-5-5` is goedkoper) en `AI_MONTHLY_LIMIT` (aantal uitleggen per klant per 30 dagen, standaard 20; de beheerder heeft 100). Daarnaast mag één persoon maximaal 3 keer per 10 minuten.
+- **Privacy:** de AI krijgt alleen cijfers en patronen van dat ene rapport (`buildAiFacts` in `server/ai.js`). Geen naam, e-mailadres, notities, lessen of schermafbeeldingen, en alleen emoties en setups uit de vaste lijsten. De uitleg wordt per rapport en taal bewaard (tabel `report_ai`) en verdwijnt met de klant of bij ‘Mijn data verwijderen’. De privacytekst in de app en bij het registreren noemt dit.
+- **Kosten:** elke uitleg is één aanroep van Claude. Reken op grofweg enkele centen per uitleg; de echte kosten zie je in de console. Vernieuwen telt als een nieuwe aanroep.
+
+**EN** Each report has a *Make explanation with AI* button (client and coach). Claude then writes a detailed explanation: what the figures mean, why they matter, where profit leaks, patterns and a plan of three exercises. Without a key the button is hidden and the rest of the app works as before.
+- **Turn it on:** create an API key at console.anthropic.com and add it in Vercel as `ANTHROPIC_API_KEY` (Settings → Environment Variables), then redeploy. Set a monthly spend limit in the console. Never put the key in code or in a chat.
+- **Optional:** `AI_MODEL` (default `claude-opus-5-5`; `claude-sonnet-5-5` is cheaper) and `AI_MONTHLY_LIMIT` (explanations per client per 30 days, default 20; the admin has 100). One person can also make at most 3 per 10 minutes.
+- **Privacy:** the AI only gets figures and patterns of that one report (`buildAiFacts` in `server/ai.js`). No name, email, notes, lessons or screenshots, and only emotions and setups from the fixed lists. The explanation is stored per report and language (table `report_ai`) and disappears with the client or on ‘Delete my data’. The in-app privacy text and the sign-up note say so.
+- **Cost:** each explanation is one call to Claude. Expect roughly a few cents each; see the console for real costs. Refreshing counts as a new call.
+- **Try it locally:** `DEV_AI_STUB=1 npm run dev` swaps Claude for a fixed test answer.
+
 ## Lokaal draaien
 
 ```bash

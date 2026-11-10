@@ -4,6 +4,7 @@ import { clearSessionCookie, publicUser } from "../auth.js";
 import { upsertAccounts, upsertSettings, upsertTrades } from "../data-ops.js";
 import { loadJournal } from "../mappers.js";
 import { accountSchema, bulkTradesSchema, importSchema, screenshotSchema, settingsSchema, tradeSchema } from "../validators.js";
+import { deleteAiFor } from "../ai.js";
 
 export async function getData({ user }) {
   return { user: publicUser(user), ...(await loadJournal(query, user.id)) };
@@ -91,6 +92,7 @@ export async function exportData({ user }) {
 export async function deleteMyData({ user }) {
   await query(`DELETE FROM accounts WHERE user_id = $1::uuid`, [user.id]);
   await query(`DELETE FROM user_settings WHERE user_id = $1::uuid`, [user.id]);
+  await deleteAiFor(user.id);
   return { ok: true };
 }
 

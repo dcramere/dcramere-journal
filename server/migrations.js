@@ -124,6 +124,23 @@ export const MIGRATIONS = [
       `CREATE INDEX IF NOT EXISTS reports_user_idx ON reports(user_id, period_start DESC)`,
     ],
   },
+  {
+    id: "004_report_ai",
+    statements: [
+      `CREATE TABLE IF NOT EXISTS report_ai (
+        id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+        user_id uuid NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+        kind text NOT NULL CHECK (kind IN ('week','month')),
+        period_key text NOT NULL,
+        lang text NOT NULL CHECK (lang IN ('nl','en')),
+        content jsonb NOT NULL,
+        input_hash text NOT NULL,
+        model text NOT NULL,
+        created_at bigint NOT NULL,
+        UNIQUE (user_id, kind, period_key, lang)
+      )`,
+    ],
+  },
 ];
 
 // `run(text, params)` voert één statement uit en geeft rijen terug.

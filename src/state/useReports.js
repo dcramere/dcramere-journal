@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { api } from "../api.js";
 import { buildReport, lastCompletedPeriods } from "../lib/report.js";
 import { todayInTz } from "../lib/tz.js";
@@ -27,7 +27,7 @@ function computeLocal(journal) {
 export function useReports(journal, enabled) {
   const local = journal.mode === "local";
   const userId = journal.owner?.id;
-  const [state, setState] = useState({ reports: [], loading: true, error: "" });
+  const [state, setState] = useState({ reports: [], loading: true, error: "", aiEnabled: false });
   const tradeCount = journal.trades.length;
 
   const localReports = useMemo(() => (local && enabled ? computeLocal(journal) : null), [local, enabled, journal.trades, journal.accounts, journal.settings.timezone]); // eslint-disable-line react-hooks/exhaustive-deps
@@ -39,12 +39,23 @@ export function useReports(journal, enabled) {
     const path = journal.readOnly ? `/api/admin/users/${userId}/reports` : "/api/reports";
     api
       .get(path)
-      .then((res) => live && setState({ reports: res.reports, loading: false, error: "" }))
-      .catch((e) => live && setState({ reports: [], loading: false, error: e.message }));
+      .then((res) => live && setState({ reports: res.reports, loading: false, error: "", aiEnabled: Boolean(res.aiEnabled) }))
+      .catch((e) => live && setState({ reports: [], loading: false, error: e.message, aiEnabled: false }));
     return () => {
       live = false;
     };
   }, [local, enabled, journal.readOnly, userId, tradeCount]);
 
-  return local ? { reports: localReports || [], loading: false, error: "" } : state;
+  // Vraagt de server om de AI-uitleg bij een rapport en zet het resultaat bij dat rapport. Gooit bij een fout.
+  const generateAi = useCallback(
+    async (report, lang) => {
+      const path = journal.readOnly ? `/api/admin/users/${userId}/reports/${report.id}/ai` : `/api/reports/${report.id}/ai`;
+      const res = await api.post(path, { lang });
+      setState((s) => ({ ...s, reports: s.reports.map((r) => (r.id === report.id ? { ...r, ai: { ...r.ai, [lang]: res.ai } } : r)) }));
+      return res.ai;
+    },
+    [journal.readOnly, userId]
+  );
+
+  return local ? { reports: localReports || [], loading: false, error: "", aiEnabled: false } : { ...state, generateAi };
 }

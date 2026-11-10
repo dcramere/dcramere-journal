@@ -7,6 +7,7 @@ import { rootSymbol, pointValue } from "../src/lib/contracts.js";
 import { buildReport, isoWeekKey, lastCompletedPeriods, previousPeriod } from "../src/lib/report.js";
 import * as L from "../src/lib/layout.js";
 import * as N from "../src/lib/news.js";
+import { buildAiFacts } from "../server/ai.js";
 
 let fails = 0;
 const eq = (name, got, want, tol = 0.005) => {
@@ -268,6 +269,18 @@ eq("tradenation: the file time zone shifts the moment", new Date(importCsv(tnTex
 eq("tradenation: the deposit becomes an adjustment", `${tn.adjustments[0].date} ${tn.adjustments[0].amount}`, "2026-10-21 500");
 eq("tradenation: net of the trades", tn.trades.reduce((s, t) => s + t.pnl, 0), 0);
 eq("decode: a plain UTF-8 file still works", decodeCsvBytes(Buffer.from("\uFEFFa,b\n1,2")), "a,b\n1,2");
+
+// AI-invoer: alleen cijfers
+const aiTrades = trades.map((t, i) => ({ ...t, mood: i % 2 ? "Rustig" : "Mijn eigen gevoel", setup: i % 3 ? "Snelweg (200)" : "Mijn eigen setup", lesson: "GEHEIM-NOTITIE" }));
+const aiData = buildReport({ trades: aiTrades, accounts: [account], tz: TZ, kind: "month", start: "2026-10-01", end: "2026-10-31" });
+const aiFacts = buildAiFacts({ data: aiData, trades: aiTrades, accounts: [account], tz: TZ });
+const aiJson = JSON.stringify(aiFacts);
+eq("ai facts: the figures match the report", `${aiFacts.figures.trades}|${aiFacts.figures.netUsd}`, "16|418");
+eq("ai facts: notes never appear", /GEHEIM-NOTITIE|lesson/.test(aiJson), false);
+eq("ai facts: a custom emotion or setup becomes a generic label", /Mijn eigen/.test(aiJson), false);
+eq("ai facts: known emotions and setups stay", aiFacts.patterns.byEmotion.some((g) => g.label === "Rustig") && aiFacts.patterns.bySetup.some((g) => g.label === "Snelweg (200)"), true);
+eq("ai facts: weekdays are named", aiFacts.patterns.byWeekday.every((g) => /day$/.test(g.label)), true);
+eq("ai facts: no account ids, symbols or emails", /@|accountId|userId|symbol|email/i.test(aiJson), false);
 
 console.log(fails ? `\n${fails} FAILED` : "\nALL PASSED");
 process.exit(fails ? 1 : 0);

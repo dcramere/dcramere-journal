@@ -69,6 +69,10 @@ export function PrivacyCard({ user, onDeleted }) {
         {tr("De beheerder kan je journal alleen lezen, niet aanpassen. Vergeet je je wachtwoord, dan kan de beheerder een resetlink voor je maken; dat wordt hier ook getoond.")}
       </p>
 
+      <p className="text-[11px] mb-3" style={{ color: COLORS.textMuted }}>
+        {tr("Druk jij of de beheerder bij een rapport op ‘Maak uitleg met AI’, dan gaan alleen de cijfers van dat rapport naar de AI-dienst van Anthropic: geen naam, e-mailadres, notities of schermafbeeldingen. De uitleg wordt bij het rapport bewaard en verdwijnt als je je data of account verwijdert.")}
+      </p>
+
       {error && (
         <p role="alert" className="text-xs mb-2" style={{ color: COLORS.red }}>
           {error}

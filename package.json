@@ -18,6 +18,7 @@
     "guide:pdf": "node scripts/make-guide-pdf.mjs"
   },
   "dependencies": {
+    "@anthropic-ai/sdk": "^1.8.0",
     "@neondatabase/serverless": "^1.2.0",
     "@vercel/functions": "^3.9.11",
     "lucide-react": "^0.383.0",

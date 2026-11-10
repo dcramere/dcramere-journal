@@ -3,6 +3,8 @@ import { createDevServer } from "./dev-api.mjs";
 import { query } from "../server/db.js";
 import { flushDeferred } from "../server/http.js";
 import { setMailer } from "../server/mailer.js";
+import { explainReport, setAiClient } from "../server/ai.js";
+import { createAiStub } from "./ai-stub.mjs";
 import { lastCompletedPeriods } from "../src/lib/report.js";
 import { todayInTz, wallToEpoch } from "../src/lib/tz.js";
 
@@ -434,6 +436,81 @@ ok("the admin overview lists rita's latest weekly report", r.status === 200 && m
 ok("the overview only holds active clients, not admins", r.json.items.every((i) => i.user.name !== "Dino"));
 r = await rita.req("GET", "/api/admin/reports/latest");
 ok("a client cannot use the admin overview", r.status === 403);
+
+// --- AI-uitleg bij een rapport
+const stub = createAiStub();
+delete process.env.ANTHROPIC_API_KEY;
+setAiClient(null);
+r = await rita.req("GET", "/api/reports");
+ok("without an API key the AI is switched off", r.json.aiEnabled === false);
+r = await rita.req("POST", `/api/reports/${firstId}/ai`, { lang: "nl" });
+ok("asking for an explanation without a key is refused", r.status === 503 && r.json.error.code === "ai_not_configured");
+
+// een trade met persoonlijke tekst, om te bewijzen dat die niet naar de AI gaat
+await rita.req("PUT", "/api/trades/w7", rt("w7", "ra", 200, midWeek(17), { mood: "Rustig", lesson: "GEHEIM-NOTITIE", setup: "Mijn eigen setup" }));
+setAiClient(stub.client);
+r = await rita.req("GET", "/api/reports");
+ok("with a client configured the AI is switched on", r.json.aiEnabled === true);
+ok("a report starts without an explanation", Object.keys(r.json.reports.find((x) => x.id === firstId).ai).length === 0);
+
+r = await rita.req("POST", `/api/reports/${firstId}/ai`, { lang: "nl" });
+ok("a client generates the explanation for their own report", r.status === 200 && r.json.ai.content.plan.length === 3 && r.json.ai.stale === false, JSON.stringify(r.json));
+const sent = JSON.stringify(stub.calls[0]);
+const givenFacts = JSON.parse(stub.calls[0].messages[0].content.replace(/^Language: \w+\n\n/, ""));
+ok("the AI got the figures", stub.calls.length === 1 && givenFacts.figures.netUsd === 160 && givenFacts.figures.trades === 7, JSON.stringify(givenFacts.figures));
+ok("the name, email and notes are not sent", !/Rita|rita@example|GEHEIM-NOTITIE|Mijn eigen setup|lesson/.test(sent), sent.slice(0, 300));
+ok("the request asks for structured JSON on the chosen model", stub.calls[0].model === "claude-opus-5-5" && stub.calls[0].output_config.format.type === "json_schema");
+
+r = await rita.req("GET", "/api/reports");
+const withAi = r.json.reports.find((x) => x.id === firstId);
+ok("the stored explanation comes back with the report", withAi.ai.nl && withAi.ai.nl.stale === false && !withAi.ai.en);
+r = await rita.req("POST", `/api/reports/${firstId}/ai`, { lang: "en" });
+ok("an English explanation is stored next to the Dutch one", r.status === 200 && /test explanation/.test(r.json.ai.content.summary));
+r = await rita.req("POST", `/api/reports/${firstId}/ai`, { lang: "fr" });
+ok("an unknown language is rejected", r.status === 400);
+
+r = await alice3.req("POST", `/api/reports/${firstId}/ai`, { lang: "nl" });
+ok("another client cannot explain rita's report", r.status === 404);
+r = await new Client().req("POST", `/api/reports/${firstId}/ai`, { lang: "nl" });
+ok("explaining needs a login", r.status === 401);
+r = await rita.req("POST", `/api/admin/users/${ritaRows.id}/reports/${firstId}/ai`, { lang: "nl" });
+ok("a client cannot use the admin route", r.status === 403);
+r = await admin.req("POST", `/api/admin/users/${ritaRows.id}/reports/${firstId}/ai`, { lang: "nl" });
+ok("the admin can generate an explanation for a client", r.status === 200 && r.json.ai.content.summary);
+r = await rita.req("GET", "/api/me/access-log");
+ok("that is logged for the client", r.json.entries.some((e) => e.action === "view_journal" && e.actor === "Dino"));
+
+await rita.req("PUT", "/api/trades/w8", rt("w8", "ra", 10, midWeek(18), { mood: "Rustig" }));
+r = await rita.req("GET", "/api/reports");
+ok("a changed report marks the explanation as out of date", r.json.reports.find((x) => x.id === firstId).ai.nl.stale === true);
+r = await rita.req("POST", `/api/reports/${firstId}/ai`, { lang: "nl" });
+ok("refreshing replaces it", r.status === 200 && r.json.ai.stale === false);
+r = await rita.req("POST", `/api/reports/${firstId}/ai`, { lang: "nl" });
+ok("the brake stops a flood of requests", r.status === 429, JSON.stringify(r.json));
+
+// foutafhandeling van de AI zelf, zonder tussenkomst van de limiet
+const facts = { report: { kind: "week" } };
+const fails2 = async (response, code) => {
+  stub.queue(response);
+  try {
+    await explainReport(facts, "nl");
+    return false;
+  } catch (e) {
+    return e.code === code;
+  }
+};
+ok("a refusal becomes ai_refused", await fails2({ response: { stop_reason: "refusal", content: [] } }, "ai_refused"));
+ok("a cut-off answer becomes ai_failed", await fails2({ response: { stop_reason: "max_tokens", content: [{ type: "text", text: "{" }] } }, "ai_failed"));
+ok("an answer that is not JSON becomes ai_failed", await fails2({ response: { stop_reason: "end_turn", content: [{ type: "text", text: "sorry" }] } }, "ai_failed"));
+ok("an answer that breaks the format becomes ai_failed", await fails2({ response: { stop_reason: "end_turn", content: [{ type: "text", text: JSON.stringify({ summary: "x" }) }] } }, "ai_failed"));
+ok("a network error becomes ai_failed", await fails2({ throw: new Error("boom") }, "ai_failed"));
+
+// de uitleg verdwijnt met de data
+await rita.req("DELETE", "/api/me/data");
+const left = await query(`SELECT count(*)::int AS n FROM report_ai WHERE user_id = $1::uuid`, [ritaRows.id]);
+ok("deleting my data deletes the explanations", left[0].n === 0);
+setAiClient(null);
+
 
 // cron
 delete process.env.CRON_SECRET;

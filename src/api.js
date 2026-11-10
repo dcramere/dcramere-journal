@@ -7,7 +7,7 @@ const MESSAGES = {
   network: T("Geen verbinding met de server."),
   invalid_credentials: T("E-mailadres of wachtwoord klopt niet."),
   email_taken: T("Dit e-mailadres heeft al een account."),
-  rate_limited: T("Te veel pogingen. Probeer het later opnieuw."),
+  rate_limited: T("Te veel pogingen of je limiet voor deze maand is bereikt. Probeer het later opnieuw."),
   consent_required: T("Je moet akkoord gaan met de privacyvoorwaarden."),
   account_disabled: T("Dit account is gedeactiveerd. Neem contact op met je coach."),
   bad_setup_token: T("Ongeldige setup-code."),
@@ -22,6 +22,10 @@ const MESSAGES = {
   invalid_token: T("Deze link is ongeldig of verlopen. Vraag een nieuwe aan."),
   user_disabled: T("Deze klant is gedeactiveerd. Activeer de klant eerst."),
   mail_not_configured: T("E-mail is nog niet ingesteld op de server."),
+  ai_not_configured: T("De AI-uitleg is nog niet ingesteld op de server."),
+  ai_busy: T("De AI is even druk. Probeer het over een minuut opnieuw."),
+  ai_failed: T("De AI kon de uitleg niet maken. Probeer het opnieuw."),
+  ai_refused: T("De AI wilde deze uitleg niet maken. Probeer het later opnieuw."),
 };
 
 export function errorText(code) {

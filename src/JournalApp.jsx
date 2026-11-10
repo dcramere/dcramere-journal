@@ -235,7 +235,7 @@ export default function JournalApp({ journal, user = null, tab, basePath = "", r
           />
         )}
         {view === "stats" && <StatsView ctx={ctx} settings={settings} />}
-        {view === "reports" && <ReportsView reports={reportData.reports} loading={reportData.loading} error={reportData.error} name={readOnly ? journal.owner?.name : null} />}
+        {view === "reports" && <ReportsView reports={reportData.reports} loading={reportData.loading} error={reportData.error} name={readOnly ? journal.owner?.name : null} aiEnabled={reportData.aiEnabled} onGenerateAi={reportData.generateAi} />}
         {view === "import" && (
           <ImportView
             journal={journal}

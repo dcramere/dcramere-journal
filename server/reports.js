@@ -5,6 +5,7 @@ import { DEFAULT_TZ } from "../src/lib/model.js";
 import { addDays, parseDate, todayInTz, wallToEpoch } from "../src/lib/tz.js";
 import { query } from "./db.js";
 import { loadJournal } from "./mappers.js";
+import { loadAiFor } from "./ai.js";
 
 const WEEKS = 4;
 const MONTHS = 3;
@@ -90,7 +91,9 @@ export async function listReports(userId) {
      WHERE user_id = $1::uuid ORDER BY period_start DESC, kind LIMIT 60`,
     [userId]
   );
-  return rows.map(mapReport);
+  const reports = rows.map(mapReport);
+  const ai = await loadAiFor(userId, reports);
+  return reports.map((r) => ({ ...r, ai: ai[`${r.kind}:${r.periodKey}`] || {} }));
 }
 
 export async function ensureAllReports() {

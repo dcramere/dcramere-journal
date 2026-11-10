@@ -174,6 +174,11 @@ export function AuthScreen({ lang, onLang, onAuthed, setup = false, needsSetup =
                   </span>
                 </label>
               )}
+              {registering && !setup && (
+                <p className="text-[11px] leading-relaxed" style={{ color: COLORS.textMuted }}>
+                  {tr("Op jouw verzoek kan een AI een rapport uitleggen. Dan gaan alleen de cijfers van dat rapport naar de AI-dienst van Anthropic: geen naam, e-mailadres of notities.")}
+                </p>
+              )}
 
               {error && (
                 <p role="alert" className="text-xs" style={{ color: COLORS.red }}>

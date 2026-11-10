@@ -44,11 +44,13 @@ add("DELETE", "/api/me/data", "user", dataRoutes.deleteMyData);
 add("DELETE", "/api/me", "user", dataRoutes.deleteMe);
 
 add("GET", "/api/reports", "user", reportRoutes.myReports);
+add("POST", "/api/reports/:id/ai", "user", reportRoutes.myReportAi);
 add("GET", "/api/cron/reports", "none", reportRoutes.cronReports);
 
 add("GET", "/api/admin/users", "admin", adminRoutes.listUsers);
 add("GET", "/api/admin/reports/latest", "admin", reportRoutes.latestReports);
 add("GET", "/api/admin/users/:id/reports", "admin", reportRoutes.userReports);
+add("POST", "/api/admin/users/:id/reports/:reportId/ai", "admin", reportRoutes.userReportAi);
 add("GET", "/api/admin/users/:id/data", "admin", adminRoutes.getUserData);
 add("GET", "/api/admin/users/:id/screenshots/:tradeId", "admin", adminRoutes.getUserScreenshot);
 add("PATCH", "/api/admin/users/:id", "admin", adminRoutes.setUserStatus);

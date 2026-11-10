@@ -5,6 +5,7 @@ import { tr } from "../i18n.js";
 import { fixed, money, pct } from "../lib/format.js";
 import { focusText, habitText, headlineText, insightText, periodLabel, previousLabel, reportShareText } from "../lib/reportText.js";
 import { Button, Card, Empty, Segmented, Select } from "../ui/primitives.jsx";
+import { AiExplanation } from "../components/AiExplanation.jsx";
 
 const usd = (v) => money(v, { sign: true, dec: 0 });
 
@@ -45,7 +46,7 @@ const Item = ({ children, color }) => (
 );
 
 // Eén rapportkaart: kerncijfers, wat goed gaat, wat beter kan en de focus voor de volgende periode.
-export function ReportCard({ report, name, onShare }) {
+export function ReportCard({ report, name, onShare, aiEnabled = false, onGenerateAi }) {
   const d = report.data;
   const k = d.kpis;
   const kind = d.kind;
@@ -150,12 +151,14 @@ export function ReportCard({ report, name, onShare }) {
             </div>
           </div>
         </div>
+
+        <AiExplanation report={report} heading={kind === "week" ? tr("Weekrapport {label}", { label }) : tr("Maandrapport {label}", { label })} enabled={aiEnabled} onGenerate={onGenerateAi} />
       </div>
     </Card>
   );
 }
 
-export function ReportsView({ reports, loading, error, name }) {
+export function ReportsView({ reports, loading, error, name, aiEnabled = false, onGenerateAi }) {
   const [kind, setKind] = useState("week");
   const list = useMemo(() => reports.filter((r) => r.kind === kind), [reports, kind]);
   const [selected, setSelected] = useState(null);
@@ -200,7 +203,7 @@ export function ReportsView({ reports, loading, error, name }) {
           <Empty>{tr("Nog geen rapport. Een rapport verschijnt zodra een week of maand is afgesloten en je daarin trades hebt gelogd.")}</Empty>
         </Card>
       ) : (
-        <ReportCard key={current.id} report={current} name={name} />
+        <ReportCard key={current.id} report={current} name={name} aiEnabled={aiEnabled} onGenerateAi={onGenerateAi} />
       )}
 
       <p className="text-[11px]" style={{ color: COLORS.textMuted }}>

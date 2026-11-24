@@ -8,6 +8,7 @@ import { BarChart, DotPlot, Donut, HBars, LineChart } from "../ui/charts.jsx";
 import { Card, CardTitle, Empty } from "../ui/primitives.jsx";
 import { tr } from "../i18n.js";
 import { WidgetGrid } from "../components/WidgetGrid.jsx";
+import { BalanceNotice } from "../components/BalanceNotice.jsx";
 import { JOURNAL_LAYOUTS } from "../lib/layout.js";
 
 export function periodTag(period) {
@@ -485,6 +486,7 @@ export function JournalView({ ctx, settings, onPickDay, onOpenTrade, calendarCur
 
   return (
     <div className="flex flex-col gap-4">
+      <BalanceNotice warnings={ctx.balanceWarnings || []} />
       <WidgetGrid kit={JOURNAL_LAYOUTS} widgets={widgets} spans={SPAN} gridClass="grid grid-cols-2 md:grid-cols-6 gap-3" />
       <p className="text-[10px] text-center" style={{ color: COLORS.textMuted, fontFamily: MONO }}>
         {tr("Tijden in {tz} · vandaag {today}", { tz, today })}

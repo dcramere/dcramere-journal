@@ -281,6 +281,21 @@ export function computeStats(trades, unit, { startBalance = 0 } = {}) {
 }
 
 // Saldo per handelsdag (altijd in dollars) plus markeringen voor stortingen/opnames.
+// Accounts waarvan het saldo volgens de trades onder nul zakt. Dat kan niet bij een echte rekening: er ontbreken dan stortingen
+// of trades. `enriched` komt uit model.enrich (met balAfter per trade). Papier- en backtestaccounts worden overgeslagen.
+export function negativeBalances(enriched, accounts) {
+  const out = [];
+  for (const a of accounts) {
+    if (a.type !== "LIVE" && a.type !== "PROP") continue;
+    let low = null;
+    for (const t of enriched) {
+      if (t.accountId === a.id && (low == null || t.balAfter < low.balance)) low = { balance: t.balAfter, day: t.day };
+    }
+    if (low && low.balance < -0.5) out.push({ accountId: a.id, name: a.name, balance: low.balance, day: low.day });
+  }
+  return out;
+}
+
 export function balanceSeries(trades, accounts) {
   const dayPnl = new Map();
   for (const t of trades) dayPnl.set(t.day, (dayPnl.get(t.day) || 0) + (Number(t.pnl) || 0));

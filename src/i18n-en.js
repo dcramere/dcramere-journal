@@ -743,5 +743,8 @@ export const EN = {
   "Maak uitleg met AI": "Make explanation with AI",
   "De uitleg wordt geschreven. Dit duurt ongeveer een halve minuut.": "The explanation is being written. This takes about half a minute.",
   "Dit rapport is veranderd sinds deze uitleg is gemaakt. Vernieuw de uitleg om de nieuwe cijfers mee te nemen.": "This report has changed since this explanation was made. Refresh the explanation to include the new figures.",
-  "Gemaakt door AI op {d}, alleen op basis van de cijfers in dit rapport. Dit is uitleg, geen financieel advies.": "Made by AI on {d}, based only on the figures in this report. This is an explanation, not financial advice."
+  "Gemaakt door AI op {d}, alleen op basis van de cijfers in dit rapport. Dit is uitleg, geen financieel advies.": "Made by AI on {d}, based only on the figures in this report. This is an explanation, not financial advice.",
+  "Het saldo van ‘{name}’ komt onder nul": "The balance of ‘{name}’ drops below zero",
+  "Volgens je trades zakte het laagste punt naar {v} op {d}. Dat kan niet op een echte rekening, dus er ontbreken waarschijnlijk stortingen of trades. Vergelijk het saldo met dat van je broker en controleer ‘Stortingen en opnames’ en je geïmporteerde bestanden. Tot dat klopt, zijn saldo, percentages en terugval onbetrouwbaar.": "According to your trades the lowest point fell to {v} on {d}. That cannot happen on a real account, so deposits or trades are probably missing. Compare the balance with your broker's and check ‘Deposits and withdrawals’ and your imported files. Until that is right, balance, percentages and drawdown are unreliable.",
+  "Melding verbergen": "Hide notice"
 };

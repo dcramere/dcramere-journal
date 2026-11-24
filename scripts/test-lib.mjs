@@ -1,6 +1,6 @@
 // Tests voor de rekenlaag (statistieken, CSV, tijdzones, migratie).  npm run test:lib
 import { makeAccount, enrich, migrateEntries, openingCapital, riskBase } from "../src/lib/model.js";
-import { riskBands, computeStats, balanceSeries, growthStats, daysToTarget, projectBalance, kelly, monteCarlo, riskOfRuin } from "../src/lib/metrics.js";
+import { negativeBalances, riskBands, computeStats, balanceSeries, growthStats, daysToTarget, projectBalance, kelly, monteCarlo, riskOfRuin } from "../src/lib/metrics.js";
 import { importCsv, exportCsv, parseMoney, decodeCsvBytes } from "../src/lib/csv.js";
 import { wallToEpoch, partsInTz, marketDaysBetween } from "../src/lib/tz.js";
 import { rootSymbol, pointValue } from "../src/lib/contracts.js";
@@ -314,6 +314,19 @@ const depStats = computeStats(depEn.filter((t) => t.id === "p3"), "$", { startBa
 eq("drawdown percent is of the money in the account, not of zero", depStats.drawdown.maxPct, 0.1, 1e-9);
 const depReport = buildReport({ trades: depTrades, accounts: [depAcc], tz: TZ, kind: "month", start: "2026-10-01", end: "2026-10-31" });
 eq("a report on a deposit account has R figures", Math.abs(depReport.kpis.netR - (5 + 5 - 100 / 6)) < 1e-9, true, JSON.stringify(depReport.kpis.netR));
+
+// Waarschuwing: saldo onder nul
+const lowAcc = makeAccount({ name: "Laag", type: "LIVE", startBalance: 0, adjustments: [{ id: "l1", date: "2026-10-01", amount: 100, note: "" }] });
+const lowTrade = (id, day, pnl, acc) => ({ ...depTrade(id, day, 10, pnl), accountId: acc.id });
+const lowEn = enrich([lowTrade("n1", "2026-10-05", 40, lowAcc), lowTrade("n2", "2026-10-06", -190, lowAcc), lowTrade("n3", "2026-10-07", 100, lowAcc)], [lowAcc], TZ);
+const lowWarn = negativeBalances(lowEn, [lowAcc]);
+eq("balance warning: a balance below zero is reported", lowWarn.length, 1);
+eq("balance warning: the lowest point and day", `${lowWarn[0].balance}|${lowWarn[0].day}`, "-50|2026-10-06");
+const okAcc = { ...lowAcc, id: "ok1", adjustments: [{ id: "l2", date: "2026-10-01", amount: 300, note: "" }] };
+eq("balance warning: enough money gives none", negativeBalances(enrich([lowTrade("n1", "2026-10-05", 40, okAcc), lowTrade("n2", "2026-10-06", -190, okAcc)], [okAcc], TZ), [okAcc]).length, 0);
+const paper = { ...lowAcc, id: "pp1", type: "PAPER" };
+eq("balance warning: paper accounts are skipped", negativeBalances(enrich([lowTrade("n2", "2026-10-06", -190, paper)], [paper], TZ), [paper]).length, 0);
+eq("balance warning: no trades, no warning", negativeBalances([], [lowAcc]).length, 0);
 
 console.log(fails ? `\n${fails} FAILED` : "\nALL PASSED");
 process.exit(fails ? 1 : 0);

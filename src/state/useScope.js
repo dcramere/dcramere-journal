@@ -1,6 +1,6 @@
 import { useMemo } from "react";
 import { enrich, openingCapital } from "../lib/model.js";
-import { balanceSeries, computeStats } from "../lib/metrics.js";
+import { balanceSeries, computeStats, negativeBalances } from "../lib/metrics.js";
 import { addDays, parseDate, todayInTz } from "../lib/tz.js";
 
 export function periodRange(period, today) {
@@ -54,7 +54,8 @@ export function useScope({ accounts, trades, settings }) {
   const startBalance = useMemo(() => openingCapital(scopedAccounts, trades, tz), [scopedAccounts, trades, tz]);
 
   const stats = useMemo(() => computeStats(scoped, unit, { startBalance }), [scoped, unit, startBalance]);
+  const balanceWarnings = useMemo(() => negativeBalances(enrichedAll, scopedAccounts), [enrichedAll, scopedAccounts]);
   const balance = useMemo(() => balanceSeries(accountTrades, scopedAccounts), [accountTrades, scopedAccounts]);
 
-  return { tz, unit, today, enrichedAll, accountTrades, scoped, scopedAccounts, range, startBalance, stats, balance };
+  return { tz, unit, today, enrichedAll, accountTrades, scoped, scopedAccounts, range, startBalance, stats, balance, balanceWarnings };
 }

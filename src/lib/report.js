@@ -2,10 +2,10 @@
 // Zuiver rekenwerk zonder tekst: de uitkomst bevat alleen codes en getallen, zodat de app
 // het in het Nederlands én Engels kan tonen (zie reportText.js). Draait in browser en server.
 import { computeStats, groupStats } from "./metrics.js";
-import { enrich } from "./model.js";
+import { enrich, openingCapital } from "./model.js";
 import { addDays, parseDate } from "./tz.js";
 
-export const REPORT_VERSION = 2; // ophogen als de opbouw van het rapport verandert: opgeslagen rapporten worden dan opnieuw berekend
+export const REPORT_VERSION = 3; // ophogen als de opbouw van het rapport verandert: opgeslagen rapporten worden dan opnieuw berekend
 const MIN_GROUP = 3; // minimaal aantal trades voordat een groep (emotie, setup, dag, uur) iets zegt
 const MIN_TRADES = 5;
 
@@ -220,7 +220,7 @@ export function buildReport({ trades, accounts, tz, kind, start, end }) {
 
   const before = previousPeriod(kind, start);
   const prevTrades = within(before.start, before.end);
-  const startBalance = sum(accounts.map((a) => Number(a.startBalance) || 0));
+  const startBalance = openingCapital(accounts, trades, tz);
   const s = computeStats(cur, "$", { startBalance });
   const sr = computeStats(cur, "R", {});
   const prev = prevTrades.length ? kpisOf(computeStats(prevTrades, "$", { startBalance }), computeStats(prevTrades, "R", {})) : null;

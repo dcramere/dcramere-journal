@@ -30,15 +30,34 @@ export function defaultSettings() {
   return { timezone: DEFAULT_TZ, unit: "$", period: "all", accountId: "all", lang: detectLang(), imports: [] };
 }
 
-// Geplande risico per trade in dollars, op het moment dat de trade wordt genomen.
-export function riskDollars(account, balanceBefore) {
-  const base = account.riskMode === "COMPOUNDING" ? balanceBefore : account.startBalance;
-  const value = Number(account.riskValue) || 0;
-  return account.riskUnit === "$" ? value : (base * value) / 100;
+function adjustmentsUpTo(account, date) {
+  return (account.adjustments || []).filter((a) => !date || a.date <= date).reduce((s, a) => s + Number(a.amount || 0), 0);
 }
 
-function adjustmentsUpTo(account, date) {
-  return (account.adjustments || []).filter((a) => a.date <= date).reduce((s, a) => s + Number(a.amount || 0), 0);
+// Het kapitaal waarop een vast percentage risico wordt gebaseerd: het startsaldo. Bestaat het account alleen uit
+// stortingen (startsaldo 0, bijvoorbeeld na een TradeNation-import), dan is dat wat er op die dag netto is gestort.
+export function riskBase(account, date) {
+  const start = Number(account.startBalance) || 0;
+  return start > 0 ? start : Math.max(0, adjustmentsUpTo(account, date));
+}
+
+// Het kapitaal waarmee een account begon te handelen: startsaldo plus de stortingen en opnames tot en met de dag van de eerste trade.
+// Daarop rekenen we de terugval in procenten, zodat die ook klopt als het geld uit stortingen komt.
+export function openingCapital(accounts, trades, tz) {
+  let total = 0;
+  for (const a of accounts) {
+    const own = trades.filter((t) => t.accountId === a.id);
+    const first = own.length ? Math.min(...own.map((t) => t.closedAt)) : null;
+    total += (Number(a.startBalance) || 0) + (first == null ? 0 : adjustmentsUpTo(a, partsInTz(first, tz).date));
+  }
+  return total;
+}
+
+// Geplande risico per trade in dollars, op het moment dat de trade wordt genomen.
+export function riskDollars(account, balanceBefore, date) {
+  const base = account.riskMode === "COMPOUNDING" ? balanceBefore : riskBase(account, date);
+  const value = Number(account.riskValue) || 0;
+  return account.riskUnit === "$" ? value : (base * value) / 100;
 }
 
 // Verrijkt trades met afgeleide waarden: dag, uur, saldo en de waarde in $, % en R.
@@ -62,8 +81,8 @@ export function enrich(trades, accounts, tz) {
       const openParts = partsInTz(t.openedAt, tz);
       const balBefore = account.startBalance + adjustmentsUpTo(account, closeParts.date) + cum;
       const pnl = Number(t.pnl) || 0;
-      const risk = riskDollars(account, balBefore);
-      const base = account.riskMode === "COMPOUNDING" ? balBefore : account.startBalance;
+      const risk = riskDollars(account, balBefore, closeParts.date);
+      const base = account.riskMode === "COMPOUNDING" ? balBefore : riskBase(account, closeParts.date);
       const r = t.r != null && t.r !== "" ? Number(t.r) : risk > 0 ? pnl / risk : null;
       cum += pnl;
       out.push({
@@ -104,7 +123,7 @@ export function migrateEntries(entries, account, tz) {
       exitPrice: price(e.exitPrice),
       openedAt: closedAt,
       closedAt,
-      pnl: Number.isFinite(r) ? r * riskDollars(account, account.startBalance) : 0,
+      pnl: Number.isFinite(r) ? r * riskDollars(account, riskBase(account)) : 0,
       fees: 0,
       r: Number.isFinite(r) ? r : null,
       setup: e.setup || "",

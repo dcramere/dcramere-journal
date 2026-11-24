@@ -8,7 +8,7 @@ import { createHash } from "node:crypto";
 import { z } from "zod";
 import { MOODS, SETUPS } from "../src/theme.js";
 import { computeStats } from "../src/lib/metrics.js";
-import { DEFAULT_TZ, enrich } from "../src/lib/model.js";
+import { DEFAULT_TZ, enrich, openingCapital } from "../src/lib/model.js";
 import { rootSymbol } from "../src/lib/contracts.js";
 import { ApiError } from "./http.js";
 import { rateLimit } from "./auth.js";
@@ -58,7 +58,7 @@ function groups(usdRows, rRows, label) {
 export function buildAiFacts({ data, trades, accounts, tz }) {
   const all = enrich(trades, accounts, tz);
   const cur = all.filter((t) => t.day >= data.start && t.day <= data.end);
-  const startBalance = accounts.reduce((s, a) => s + (Number(a.startBalance) || 0), 0);
+  const startBalance = openingCapital(accounts, trades, tz);
   const s = computeStats(cur, "$", { startBalance });
   const sr = computeStats(cur, "R", {});
   const withMood = cur.filter((t) => t.mood).length;

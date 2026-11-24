@@ -1,5 +1,5 @@
 import { useMemo } from "react";
-import { enrich } from "../lib/model.js";
+import { enrich, openingCapital } from "../lib/model.js";
 import { balanceSeries, computeStats } from "../lib/metrics.js";
 import { addDays, parseDate, todayInTz } from "../lib/tz.js";
 
@@ -51,10 +51,7 @@ export function useScope({ accounts, trades, settings }) {
     [accountTrades, range]
   );
 
-  const startBalance = useMemo(
-    () => scopedAccounts.reduce((s, a) => s + (Number(a.startBalance) || 0), 0),
-    [scopedAccounts]
-  );
+  const startBalance = useMemo(() => openingCapital(scopedAccounts, trades, tz), [scopedAccounts, trades, tz]);
 
   const stats = useMemo(() => computeStats(scoped, unit, { startBalance }), [scoped, unit, startBalance]);
   const balance = useMemo(() => balanceSeries(accountTrades, scopedAccounts), [accountTrades, scopedAccounts]);

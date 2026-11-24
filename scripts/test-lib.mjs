@@ -1,5 +1,5 @@
 // Tests voor de rekenlaag (statistieken, CSV, tijdzones, migratie).  npm run test:lib
-import { makeAccount, enrich, migrateEntries } from "../src/lib/model.js";
+import { makeAccount, enrich, migrateEntries, openingCapital, riskBase } from "../src/lib/model.js";
 import { riskBands, computeStats, balanceSeries, growthStats, daysToTarget, projectBalance, kelly, monteCarlo, riskOfRuin } from "../src/lib/metrics.js";
 import { importCsv, exportCsv, parseMoney, decodeCsvBytes } from "../src/lib/csv.js";
 import { wallToEpoch, partsInTz, marketDaysBetween } from "../src/lib/tz.js";
@@ -281,6 +281,39 @@ eq("ai facts: a custom emotion or setup becomes a generic label", /Mijn eigen/.t
 eq("ai facts: known emotions and setups stay", aiFacts.patterns.byEmotion.some((g) => g.label === "Rustig") && aiFacts.patterns.bySetup.some((g) => g.label === "Snelweg (200)"), true);
 eq("ai facts: weekdays are named", aiFacts.patterns.byWeekday.every((g) => /day$/.test(g.label)), true);
 eq("ai facts: no account ids, symbols or emails", /@|accountId|userId|symbol|email/i.test(aiJson), false);
+
+// Account dat alleen uit stortingen bestaat (startsaldo 0): risico, % en R rekenen op wat er is gestort
+const depAcc = makeAccount({
+  name: "Stortingen",
+  startBalance: 0,
+  riskUnit: "%",
+  riskValue: 1,
+  adjustments: [
+    { id: "d1", date: "2026-10-01", amount: 1000, note: "" },
+    { id: "d2", date: "2026-10-20", amount: -400, note: "" },
+  ],
+});
+const depTrade = (id, day, h, pnl) => {
+  const [y, m, dd] = day.split("-").map(Number);
+  const ms = wallToEpoch(y, m, dd, h, 0, 0, TZ);
+  return { id, accountId: depAcc.id, symbol: "US TECH 100", direction: "Long", qty: 1, openedAt: ms - 60000, closedAt: ms, pnl, fees: 0, r: null, setup: "", mood: "", lesson: "" };
+};
+const depTrades = [depTrade("p1", "2026-10-05", 10, 50), depTrade("p2", "2026-10-21", 10, 30), depTrade("p3", "2026-10-22", 10, -100)];
+const depEn = enrich(depTrades, [depAcc], TZ);
+eq("deposit account: 1% of the deposited $1000 is $10 risk, so +$50 is 5R", depEn[0].v.R, 5);
+eq("deposit account: percent is of the deposited money", depEn[0].v["%"], 5);
+eq("deposit account: after a withdrawal the base follows ($600)", depEn[1].v.R, 5);
+eq("deposit account: percent after the withdrawal", depEn[1].v["%"], 5);
+eq("deposit account: a loss is -R as well", depEn[2].v.R, -100 / 6, 1e-9);
+eq("risk base: a normal account keeps its starting balance", riskBase(makeAccount({ startBalance: 25000, adjustments: [{ id: "x", date: "2026-10-01", amount: 5000, note: "" }] }), "2026-10-05"), 25000);
+eq("risk base: no money yet gives 0", riskBase(depAcc, "2026-09-01"), 0);
+eq("opening capital: deposits up to the first trade count", openingCapital([depAcc], depTrades, TZ), 1000);
+eq("opening capital: a later withdrawal does not", openingCapital([depAcc], depTrades.slice(0, 1), TZ), 1000);
+eq("opening capital: a normal account is just its starting balance", openingCapital([account], trades, TZ), 25000);
+const depStats = computeStats(depEn.filter((t) => t.id === "p3"), "$", { startBalance: openingCapital([depAcc], depTrades, TZ) });
+eq("drawdown percent is of the money in the account, not of zero", depStats.drawdown.maxPct, 0.1, 1e-9);
+const depReport = buildReport({ trades: depTrades, accounts: [depAcc], tz: TZ, kind: "month", start: "2026-10-01", end: "2026-10-31" });
+eq("a report on a deposit account has R figures", Math.abs(depReport.kpis.netR - (5 + 5 - 100 / 6)) < 1e-9, true, JSON.stringify(depReport.kpis.netR));
 
 console.log(fails ? `\n${fails} FAILED` : "\nALL PASSED");
 process.exit(fails ? 1 : 0);

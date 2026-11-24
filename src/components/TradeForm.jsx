@@ -5,7 +5,7 @@ import { deleteShot, getShot, setShot as saveShot } from "../shots.js";
 import { KNOWN_ROOTS, pointValue } from "../lib/contracts.js";
 import { money } from "../lib/format.js";
 import { resizeImageFile } from "../lib/image.js";
-import { newId, riskDollars } from "../lib/model.js";
+import { newId, riskBase, riskDollars } from "../lib/model.js";
 import { partsInTz, wallToEpoch } from "../lib/tz.js";
 import { Button, Field, Modal, TextInput, inputStyle } from "../ui/primitives.jsx";
 import { tr } from "../i18n.js";
@@ -126,7 +126,7 @@ export function TradeForm({ accounts, defaultAccountId, initial, tz, knownSymbol
       pnl = suggested.net;
       fees = suggested.fees;
     } else if (r != null) {
-      pnl = r * riskDollars(account, account.startBalance);
+      pnl = r * riskDollars(account, riskBase(account));
       fees = fees ?? 0;
     } else {
       return setError(tr("Vul een resultaat in ($ of R), of entry/exit/aantal van een bekend contract."));

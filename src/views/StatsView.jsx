@@ -27,6 +27,7 @@ import { Card, CardTitle, Empty, Segmented, Select } from "../ui/primitives.jsx"
 import { periodTag } from "./JournalView.jsx";
 import { newsDayStats, newsShort } from "../lib/news.js";
 import { WidgetGrid } from "../components/WidgetGrid.jsx";
+import { riskBase } from "../lib/model.js";
 import { STATS_LAYOUTS } from "../lib/layout.js";
 import { tr } from "../i18n.js";
 
@@ -187,8 +188,8 @@ export function StatsView({ ctx, settings }) {
   const newsRows = useMemo(() => newsDayStats(scoped, unit), [scoped, unit]);
   const dollars = useMemo(() => scoped.map((t) => t.v.$), [scoped]);
   const mc = useMemo(() => monteCarlo(dollars), [dollars]);
-  const startBal = scopedAccounts.reduce((s, a) => s + (Number(a.startBalance) || 0), 0);
-  const ruin = useMemo(() => riskOfRuin(dollars, (startBal * Number(ruinPct)) / 100), [dollars, startBal, ruinPct]); const k = kelly(stats.winRate, stats.ratio); const firstAccount = scopedAccounts[0]; const plannedRisk = firstAccount ? firstAccount.riskUnit === "$" ? (Number(firstAccount.riskValue) || 0) / (Number(firstAccount.startBalance) || 1) : (Number(firstAccount.riskValue) || 0) / 100 : null; const s = stats; const dd = s.drawdown; const widgets = {
+  const startBal = ctx.startBalance;
+  const ruin = useMemo(() => riskOfRuin(dollars, (startBal * Number(ruinPct)) / 100), [dollars, startBal, ruinPct]); const k = kelly(stats.winRate, stats.ratio); const firstAccount = scopedAccounts[0]; const plannedRisk = firstAccount ? firstAccount.riskUnit === "$" ? (Number(firstAccount.riskValue) || 0) / (riskBase(firstAccount) || 1) : (Number(firstAccount.riskValue) || 0) / 100 : null; const s = stats; const dd = s.drawdown; const widgets = {
     year: {
       label: "Jaar in één oogopslag",
       size: "full",
